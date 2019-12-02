@@ -1,0 +1,1 @@
+This folder contains the tools necessary to set up the computer that you wish to use as your QCPU
