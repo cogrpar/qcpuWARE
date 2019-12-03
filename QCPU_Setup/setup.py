@@ -28,3 +28,9 @@ packages = ["dwave-qbsolv", "dwave-cloud-client", "dwave-embedding-utilities", "
 for package in packages:
     installDWave = subprocess.Popen(["pip3 install " + package])
     installDWave.wait()
+
+    
+
+#append command to start code on boot
+onBoot = open("/etc/crontab", "a+")
+onBoot.write(
