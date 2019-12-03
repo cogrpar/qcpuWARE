@@ -12,8 +12,15 @@ installWS.wait()
 file = open("/var/www/html/storage.php","w+")
 file.write('''<?php
 //this script allows the users computer to communicate with the QCPU...
+$var1 = $_REQUEST['input'];
+$WriteMyRequest=$var1;
+file_put_contents('storage.txt', ' ', FILE_APPEND);
+file_put_contents('storage.txt', $WriteMyRequest, FILE_APPEND);
 ?>''')
 file.close()
+store = open("/var/www/html/storage.txt","w+")
+store.write(".")
+store.close()
 
 
 #now build the dwave python library
