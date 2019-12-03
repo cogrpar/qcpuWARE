@@ -6,7 +6,7 @@ import subprocess
 
 
 #start by installing a webserver application and creating the webserver files which allow your computer to communicate with the QCPU
-installWS = subprocess.Popen(["apt-get install apache2 php libapache2-mod-php", "-y"])
+installWS = subprocess.Popen(["apt-get install apache2 php libapache2-mod-php", "-y"], shell=True)
 installWS.wait()
 #create files
 file = open("/var/www/html/storage.php","w+")
@@ -24,6 +24,7 @@ store.close()
 
 
 #now build the dwave python library
+packages = ["
 for filename in os.listdir("DWave-library/"):
     installDWave = subprocess.Popen(["pip3 install " + filename])
     installDWave.wait()
