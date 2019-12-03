@@ -33,4 +33,7 @@ for package in packages:
 
 #append command to start code on boot
 onBoot = open("/etc/crontab", "a+")
-onBoot.write(
+progrms = [] #put the name of each program in this list to write them to the contrab file so they run on boot...
+for progrm in progrms:
+    onBoot.write("@reboot " + progrm)
+onBoot.close()
