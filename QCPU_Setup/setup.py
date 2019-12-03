@@ -37,3 +37,16 @@ progrms = [] #put the name of each program in this list to write them to the con
 for progrm in progrms:
     onBoot.write("@reboot " + progrm)
 onBoot.close()
+
+
+
+#setup DWave connection and ping the machine
+print ("if you are not sure how to fill out these fields, please refer to https://docs.ocean.dwavesys.com/en/latest/overview/dwavesys.html")
+setupConnec = subprocess.Popen(["dwave config create"], shell=True)
+setupConnec.wait()
+ping = subprocess.Popen(["dwave ping"])
+ping.wait()
+
+
+#all done
+print ("setup complete")
