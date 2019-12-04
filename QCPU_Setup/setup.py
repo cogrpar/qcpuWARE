@@ -23,20 +23,11 @@ store.write(".")
 store.close()
 
 
-#install SWIG
-libpcre = subprocess.Popen(["apt-get install libpcre3 libpcre3-dev"], shell=True)
-libpcre.wait()
-swig = subprocess.Popen(["wget http://prdownloads.sourceforge.net/swig/swig-3.0.12.tar.gz"], shell=True)
-swig.wait()
-tar = subprocess.Popen(["tar xzf swig-3.0.12.tar.gz"], shell=True)
-tar.wait()
-build = subprocess.Popen(["swig-3.0.12/./configure"], shell=True)
-build.wait()
-make = subprocess.Popen(["cd swig-3.0.12/ and make"], shell=True)
-make.wait()
-install = subprocess.Popen(["make install"], shell=True)
-install.wait()
-
+#make sure swig is installed:
+swig = subprocess.check_output(["swig"])
+if ("not found" in swig):
+    print ("It looks like you don't have SWIG installed.  Please install it to continue.  If you are on a pi or similar device, see https://github.com/Yadoms/yadoms/wiki/Build-on-RaspberryPI for installing SWIG.  Otherwise, try 'apt-get install swig'.  Once you have SWIG installed, rerun this script.")
+    quit()
 
 
 #now build the dwave python library
