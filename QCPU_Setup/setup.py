@@ -28,13 +28,14 @@ libpcre = subprocess.Popen(["apt-get install libpcre3 libpcre3-dev"])
 libpcre.wait()
 swig = subprocess.Popen(["wget http://prdownloads.sourceforge.net/swig/swig-3.0.12.tar.gz"])
 swig.wait()
-tar = subprocess.Popen(["tar xzf protobuf-cpp-3.2.0.tar.gz"])
+tar = subprocess.Popen(["tar xzf swig-3.0.12.tar.gz"])
 tar.wait()
-build = subprocess.Popen(["protobuf-3.2.0/mkdir build"])
+build = subprocess.Popen(["swig-3.0.12/./configure"])
 build.wait()
-autogen
-
-
+make = subprocess.Popen(["swig-3.0.12/make"])
+make.wait()
+install = subprocess.Popen(["swig-3.0.12/make install"])
+install.wait()
 
 
 
