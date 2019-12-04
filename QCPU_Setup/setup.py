@@ -32,9 +32,9 @@ tar = subprocess.Popen(["tar xzf swig-3.0.12.tar.gz"], shell=True)
 tar.wait()
 build = subprocess.Popen(["swig-3.0.12/./configure"], shell=True)
 build.wait()
-make = subprocess.Popen(["swig-3.0.12/make"], shell=True)
+make = subprocess.Popen(["cd swig-3.0.12/ and make"], shell=True)
 make.wait()
-install = subprocess.Popen(["swig-3.0.12/make install"], shell=True)
+install = subprocess.Popen(["make install"], shell=True)
 install.wait()
 
 
