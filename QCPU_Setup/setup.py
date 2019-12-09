@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 #library to run terminal commands
 #make sure that this code is run as root...
 ################################################################################################################
@@ -29,7 +30,14 @@ packages = ["dwave-qbsolv", "dwave-cloud-client", "dwave-embedding-utilities", "
 for package in packages:
     installDWave = subprocess.Popen(["pip3 install " + package], shell=True)
     installDWave.wait()
-installTabu = subprocess.Popen("mv QCPU_Setup/DWave-library/site-packages 
+for filename in os.listdir("DWave-library/site-packages"):  
+    usr = subprocess.Popen(["ls /home"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    pyVer = sys.version
+    pyVerSplit = pyVer.split(" ")
+    pyVer = pyVerSplit[1]
+    dir = "DWave-library/site-packages/", filename, " /home/", usr, "/.local/lib/Python-", pyVer, "/site-packages"
+    installTabu = subprocess.Popen([dir])
+    installTabu.wait()
   
 
 
