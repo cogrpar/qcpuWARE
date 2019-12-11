@@ -35,8 +35,9 @@ for filename in os.listdir("DWave-library/site-packages"):
     pyVer = sys.version
     pyVerSplit = pyVer.split(" ")
     pyVer = pyVerSplit[1]
-    dir = "mv DWave-library/site-packages/", filename, " /home/", stout, "/.local/lib/Python-", pyVer, "/site-packages"
-    installTabu = subprocess.Popen([dir])
+    dir = ["mv DWave-library/site-packages/", filename, " /home/", stout, "/.local/lib/Python-", pyVer, "/site-packages"]
+    comnd = ','.join(dir)
+    installTabu = subprocess.Popen([comnd])
     installTabu.wait()
   
 
