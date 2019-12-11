@@ -31,11 +31,13 @@ for package in packages:
     installDWave = subprocess.Popen(["pip3 install " + package], shell=True)
     installDWave.wait()
 for filename in os.listdir("DWave-library/site-packages"):  
-    usr = subprocess.Popen(["ls /home"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    usr = subprocess.Popen(["ls /home"])
+    stdout=subprocess.PIPE
+    stderr=subprocess.STDOUT
     pyVer = sys.version
     pyVerSplit = pyVer.split(" ")
     pyVer = pyVerSplit[1]
-    dir = ["mv DWave-library/site-packages/", filename, " /home/", stout, "/.local/lib/Python-", pyVer, "/site-packages"]
+    dir = ["mv DWave-library/site-packages/", filename, " /home/", stdout, "/.local/lib/Python-", pyVer, "/site-packages"]
     comnd = ','.join(dir)
     installTabu = subprocess.Popen([comnd])
     installTabu.wait()
