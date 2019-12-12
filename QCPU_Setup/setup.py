@@ -26,7 +26,7 @@ store.close()
 
 
 #now build the dwave python library
-packages = ["dwave-qbsolv", "dwave-cloud-client", "dwave-embedding-utilities", "dwave-micro-client", "dwave-micro-client-dimod", "dwave-networkx", "dwave-sapi-dimod", "dwave-sdk", "dwave-system", "dwavebinarycsp", "dwave-hybrid"] 
+packages = ["dwave-qbsolv", "dwave-cloud-client", "dwave-embedding-utilities", "dwave-micro-client", "dwave-micro-client-dimod", "dwave-networkx", "dwave-sdk", "dwave-system", "dwavebinarycsp", "dwave-hybrid"] 
 for package in packages:
     installDWave = subprocess.Popen(["pip3 install " + package], shell=True)
     installDWave.wait()
@@ -44,7 +44,12 @@ for filename in os.listdir("DWave-library/site-packages"):
     installTabu = subprocess.Popen(["mv", dir1, dir2])
     installTabu.wait()
     print ("moved ", dir1, " to new location: ", dir2)
-
+#now reinstall numpy
+numpyInstall = subprocess.Popen(["pip3 uninstall numpy"])
+numpyInstall.wait()
+numpyInstall = subprocess.Popen(["pip3 install numpy"])
+numpyInstall.wait()
+    
     
 
 #append command to start code on boot
