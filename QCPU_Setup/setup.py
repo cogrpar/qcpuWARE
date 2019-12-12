@@ -30,19 +30,22 @@ packages = ["dwave-qbsolv", "dwave-cloud-client", "dwave-embedding-utilities", "
 for package in packages:
     installDWave = subprocess.Popen(["pip3 install " + package], shell=True)
     installDWave.wait()
-for filename in os.listdir("DWave-library/site-packages"):  
-    usr = subprocess.Popen(["ls /home"])
-    stdout=subprocess.PIPE
-    stderr=subprocess.STDOUT
+for filename in os.listdir("DWave-library/site-packages"):
+    usr = os.environ['HOME']
     pyVer = sys.version
     pyVerSplit = pyVer.split(" ")
-    pyVer = pyVerSplit[1]
-    dir = ["mv DWave-library/site-packages/", filename, " /home/", stdout, "/.local/lib/Python-", pyVer, "/site-packages"]
-    comnd = ','.join(dir)
-    installTabu = subprocess.Popen([comnd])
+    pyVer = pyVerSplit[0]
+    pyVerSplit = pyVer.split(".")
+    pyVer = (pyVerSplit[0] + "." + pyVerSplit[1])
+    oLoc = ["DWave-library/site-packages/", filename]
+    nLoc = [usr, "/.local/lib/python", pyVer, "/site-packages/"]
+    dir1 = ''.join(str(v) for v in oLoc)
+    dir2 = ''.join(str(w) for w in nLoc)
+    installTabu = subprocess.Popen(["mv", dir1, dir2])
     installTabu.wait()
-  
+    print ("moved ", dir1, " to new location: ", dir2)
 
+    
 
 #append command to start code on boot
 onBoot = open("/etc/crontab", "a+")
