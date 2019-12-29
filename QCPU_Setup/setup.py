@@ -26,7 +26,7 @@ store.close()
 
 
 #now build the dwave python library
-packages = ["dwave-qbsolv", "dwave-cloud-client", "dwave-embedding-utilities", "dwave-micro-client", "dwave-micro-client-dimod", "dwave-networkx", "dwave-sdk", "dwave-system", "dwavebinarycsp", "dwave-hybrid"] 
+packages = ["matplotlib", "dwave-qbsolv", "dwave-cloud-client", "dwave-embedding-utilities", "dwave-micro-client", "dwave-micro-client-dimod", "dwave-networkx", "dwave-sdk", "dwave-system", "dwavebinarycsp", "dwave-hybrid"] 
 for package in packages:
     installDWave = subprocess.Popen(["pip3 install " + package], shell=True)
     installDWave.wait()
