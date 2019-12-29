@@ -1,3 +1,7 @@
+#this is an example problem from the d'wave ocean docs that finds the minimum number of colors that are required to color each state such that no two states of the same color are touching;  it uses the dwave hybrid library
+#run this code after running setup.py to make sure that the collected dwave packages work correctly
+#see "https://docs.ocean.dwavesys.com/en/latest/examples/map_kerberos.html#map-kerberos" for information on the code
+#I did not write this code, and I am not taking any credit for it
 import networkx as nx
 
 G = nx.read_adjlist('usa.adj', delimiter = ',')
