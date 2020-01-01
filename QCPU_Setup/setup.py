@@ -45,9 +45,9 @@ for filename in os.listdir("DWave-library/site-packages"):
     installTabu.wait()
     print ("moved ", dir1, " to new location: ", dir2)
 #now reinstall numpy
-numpyInstall = subprocess.Popen(["pip3 uninstall numpy"])
+numpyInstall = subprocess.Popen(["pip3", "uninstall", "numpy", "-y"])
 numpyInstall.wait()
-numpyInstall = subprocess.Popen(["pip3 install numpy"])
+numpyInstall = subprocess.Popen(["pip3", "install", "numpy"])
 numpyInstall.wait()
     
     
