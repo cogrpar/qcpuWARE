@@ -1,1 +1,0 @@
-pip install  dwave-qbsolv dwave-cloud-client dwave-embedding-utilities dwave-micro-client dwave-micro-client-dimod dwave-networkx dwave-sapi-dimod dwave-sdk dwave-system dwavebinarycsp 
