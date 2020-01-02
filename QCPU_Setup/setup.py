@@ -23,32 +23,41 @@ store = open("/var/www/html/storage.txt","w+")
 store.write(".")
 store.close()
 
-
-
+usr = " "
+from os import path
+while True:
+    usr = input("username:")
+    usrLoc = ["/home/", usr, "/.local/lib/python"]
+    userLocate = ''.join(str(v) for v in usrLoc)
+    if(path.exists("guru99.txt")):
+        print ("valid username")
+        break
+    else:
+        print ("invalid username...  ")
+        
 #now copy the dwave python librarys to the correct locations
 for filename in os.listdir("DWave-library/site-packages"):
-    usr = os.environ['HOME']
     pyVer = sys.version
     pyVerSplit = pyVer.split(" ")
     pyVer = pyVerSplit[0]
     pyVerSplit = pyVer.split(".")
     pyVer = (pyVerSplit[0] + "." + pyVerSplit[1])
     oLoc = ["DWave-library/site-packages/", filename]
-    nLoc = [usr, "/.local/lib/python", pyVer, "/site-packages/"]
+    nLoc = ["/home/", usr, "/.local/lib/python", pyVer, "/site-packages/"]
     dir1 = ''.join(str(v) for v in oLoc)
     dir2 = ''.join(str(w) for w in nLoc)
     mvSite = subprocess.Popen(["mv", dir1, dir2])
     mvSite.wait()
     print ("moved ", dir1, " to new location: ", dir2)
+    
 for filename in os.listdir("DWave-library/dist-packages"):
-    usr = os.environ['HOME']
     pyVer = sys.version
     pyVerSplit = pyVer.split(" ")
     pyVer = pyVerSplit[0]
     pyVerSplit = pyVer.split(".")
     pyVer = (pyVerSplit[0] + "." + pyVerSplit[1])
     oLoc = ["DWave-library/dist-packages/", filename]
-    nLoc = ["usr/local/lib/python", pyVer, "/dist-packages/"]
+    nLoc = ["/usr/local/lib/python", pyVer, "/dist-packages/"]
     dir1 = ''.join(str(v) for v in oLoc)
     dir2 = ''.join(str(w) for w in nLoc)
     mvDist = subprocess.Popen(["mv", dir1, dir2])
