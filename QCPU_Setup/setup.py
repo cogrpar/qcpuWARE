@@ -25,11 +25,7 @@ store.close()
 
 
 
-#now build the dwave python library
-packages = ["matplotlib", "dwave-qbsolv", "dwave-cloud-client", "dwave-embedding-utilities", "dwave-micro-client", "dwave-micro-client-dimod", "dwave-networkx", "dwave-sdk", "dwave-system", "dwavebinarycsp", "dwave-hybrid"] 
-for package in packages:
-    installDWave = subprocess.Popen(["pip3 install " + package], shell=True)
-    installDWave.wait()
+#now copy the dwave python librarys to the correct locations
 for filename in os.listdir("DWave-library/site-packages"):
     usr = os.environ['HOME']
     pyVer = sys.version
@@ -41,14 +37,24 @@ for filename in os.listdir("DWave-library/site-packages"):
     nLoc = [usr, "/.local/lib/python", pyVer, "/site-packages/"]
     dir1 = ''.join(str(v) for v in oLoc)
     dir2 = ''.join(str(w) for w in nLoc)
-    installTabu = subprocess.Popen(["mv", dir1, dir2])
-    installTabu.wait()
+    mvSite = subprocess.Popen(["mv", dir1, dir2])
+    mvSite.wait()
     print ("moved ", dir1, " to new location: ", dir2)
-#now reinstall numpy
-numpyInstall = subprocess.Popen(["pip3", "uninstall", "numpy", "-y"])
-numpyInstall.wait()
-numpyInstall = subprocess.Popen(["pip3", "install", "numpy"])
-numpyInstall.wait()
+for filename in os.listdir("DWave-library/dist-packages"):
+    usr = os.environ['HOME']
+    pyVer = sys.version
+    pyVerSplit = pyVer.split(" ")
+    pyVer = pyVerSplit[0]
+    pyVerSplit = pyVer.split(".")
+    pyVer = (pyVerSplit[0] + "." + pyVerSplit[1])
+    oLoc = ["DWave-library/dist-packages/", filename]
+    nLoc = ["usr/local/lib/python", pyVer, "/dist-packages/"]
+    dir1 = ''.join(str(v) for v in oLoc)
+    dir2 = ''.join(str(w) for w in nLoc)
+    mvDist = subprocess.Popen(["mv", dir1, dir2])
+    mvDist.wait()
+    print ("moved ", dir1, " to new location: ", dir2)
+
     
     
 
