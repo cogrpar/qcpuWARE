@@ -27,7 +27,7 @@ usr = " "
 from os import path
 while True:
     usr = input("username:")
-    usrLoc = ["/home/", usr, "/.local/lib/python"]
+    usrLoc = ["/home/", usr, "/.local/lib/"]
     userLocate = ''.join(str(v) for v in usrLoc)
     if(path.exists(userLocate)):
         print ("valid username")
