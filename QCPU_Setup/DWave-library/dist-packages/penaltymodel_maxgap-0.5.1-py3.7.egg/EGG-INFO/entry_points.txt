@@ -1,0 +1,3 @@
+[penaltymodel_factory]
+maxgap = penaltymodel.maxgap:get_penalty_model
+

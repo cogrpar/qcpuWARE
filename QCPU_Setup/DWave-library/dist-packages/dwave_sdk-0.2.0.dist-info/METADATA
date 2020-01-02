@@ -1,0 +1,18 @@
+Metadata-Version: 2.0
+Name: dwave-sdk
+Version: 0.2.0
+Summary: Software development kit for open source D-Wave tools
+Home-page: https://github.com/dwavesystems/dwave_sdk
+Author: D-Wave Systems Inc.
+Author-email: tools@dwavesys.com
+License: Apache 2.0
+Description-Content-Type: UNKNOWN
+Platform: UNKNOWN
+Requires-Dist: dimod
+Requires-Dist: dwave-micro-client
+Requires-Dist: dwave-networkx
+Requires-Dist: dwave-micro-client-dimod
+
+UNKNOWN
+
+

@@ -1,0 +1,5 @@
+dimod>=0.7.9
+numpy>=1.14
+
+[test]
+coverage

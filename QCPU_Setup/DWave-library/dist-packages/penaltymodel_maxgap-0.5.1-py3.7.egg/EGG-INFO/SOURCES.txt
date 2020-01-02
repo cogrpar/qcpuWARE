@@ -1,0 +1,17 @@
+README.rst
+setup.cfg
+setup.py
+penaltymodel/__init__.py
+penaltymodel/maxgap/__init__.py
+penaltymodel/maxgap/generation.py
+penaltymodel/maxgap/interface.py
+penaltymodel/maxgap/package_info.py
+penaltymodel/maxgap/smt.py
+penaltymodel/maxgap/theta.py
+penaltymodel_maxgap.egg-info/PKG-INFO
+penaltymodel_maxgap.egg-info/SOURCES.txt
+penaltymodel_maxgap.egg-info/dependency_links.txt
+penaltymodel_maxgap.egg-info/entry_points.txt
+penaltymodel_maxgap.egg-info/not-zip-safe
+penaltymodel_maxgap.egg-info/requires.txt
+penaltymodel_maxgap.egg-info/top_level.txt
