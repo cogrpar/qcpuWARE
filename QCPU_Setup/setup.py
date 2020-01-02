@@ -29,7 +29,7 @@ while True:
     usr = input("username:")
     usrLoc = ["/home/", usr, "/.local/lib/python"]
     userLocate = ''.join(str(v) for v in usrLoc)
-    if(path.exists("guru99.txt")):
+    if(path.exists(userLocate)):
         print ("valid username")
         break
     else:
