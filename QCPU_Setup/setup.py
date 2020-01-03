@@ -63,6 +63,9 @@ for filename in os.listdir("DWave-library/dist-packages"):
     mvDist = subprocess.Popen(["mv", dir1, dir2])
     mvDist.wait()
     print ("moved ", dir1, " to new location: ", dir2)
+#import cloud client
+cloud = subprocess.Popen(["pip3 install dwave-cloud-client"], shell=True)
+cloud.wait()
 
     
     
