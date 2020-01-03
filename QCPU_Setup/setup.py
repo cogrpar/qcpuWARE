@@ -84,7 +84,7 @@ setupConnec = subprocess.Popen([connec], shell=True)
 setupConnec.wait()
 pinng = ["sudo --u ", usr, " dwave ping"]
 pinnng = ''.join(str(v) for v in pinng)
-ping = subprocess.Popen([pinnng])
+ping = subprocess.Popen([pinnng], shell=True)
 ping.wait()
 
 
