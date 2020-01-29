@@ -66,6 +66,9 @@ for filename in os.listdir("DWave-library/dist-packages"):
 #import cloud client
 cloud = subprocess.Popen(["pip3 install dwave-cloud-client"], shell=True)
 cloud.wait()
+#import sympy
+sym = subprocess.Popen(["pip3 install sympy"], shell=True)
+sym.wait()
 
     
     
