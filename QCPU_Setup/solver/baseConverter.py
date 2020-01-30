@@ -36,14 +36,13 @@ def toBin(domain, eq, var):
 
     eq = eq.subs(("v" + str(i)+"temp"), bina) #substitute the binary vars in for the decimal ones
 
-  print(eq)
   #replace fraction with decimal
   strEq = str(eq)
   termsPos = []
   termsNeg = []
-  termsPls = strEq.split(" + ")
+  termsPls = strEq.split("+")
   for i in termsPls:
-    ii = i.split(" - ") #split along negative as well
+    ii = i.split("-") #split along negative as well
     for j in range(len(ii)):
       if(j > 0): #if not the first entry (not positive)
         termsNeg.append(ii[j])
@@ -64,6 +63,7 @@ def toBin(domain, eq, var):
   for i in termsPos:
     strEq += i + " + "
   strEq = strEq[:-3]
+  strEq += " - "
   for i in termsNeg:
     strEq += i + " - "
   strEq = strEq[:-3]
@@ -80,7 +80,7 @@ def toDec(places, values):
     tot = 0
     i+= 1
     for j in range(i): #loop over the cooresponding binary place vals
-      tot = 2**(i-1) * values[pos] #convert to decimal
+      tot += 2**(j-1) * values[pos] #convert to decimal
       pos += 1
     outVars.append(tot) #append the result to the output array
   return(outVars)
