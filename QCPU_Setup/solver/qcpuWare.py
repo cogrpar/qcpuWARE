@@ -11,14 +11,14 @@ def defVars(numOfVars):
   return vars
 
 #code
-domain = [4, 4, 4] #really we would get this array from webserver
+domain = [4, 4, 4, 4] #really we would get this array from webserver
 numOfVars = len(domain)
-var = ["v0", "v1", "v2"] #really we would get this array from webserver
+var = ["v0", "v1", "v2", "v3"] #really we would get this array from webserver
 
 for i in var: #this defines each variable using sympy's symbols function
   vars()[i] = symbols(i)
 
-eq = v1 + v2 - v0 #really we would get this equation from webserver
+eq = v1 + v2 - v0 - v3 #really we would get this equation from webserver
 EQ, numOfVars, places = toBin(domain, eq, var) #convert function to binary and get it as a string, along with a new variable count and an array used to convert back to decimal
 
 #now solve for the matrix:

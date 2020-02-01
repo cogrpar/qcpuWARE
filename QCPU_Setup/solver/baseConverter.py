@@ -24,7 +24,11 @@ def toBin(domain, eq, var):
     power -= 1
     places.append(power) #store this value in an array to be used later in converting back to decimal
 
-    bina = "(2**-1)*v" + str(place) + " + "
+    bina = "0.25*v" + str(place) + " + "
+
+    place += 1
+
+    bina += "(2**-1)*v" + str(place) + " + "
 
     place += 1
 
@@ -36,6 +40,7 @@ def toBin(domain, eq, var):
 
     eq = eq.subs(("v" + str(i)+"temp"), bina) #substitute the binary vars in for the decimal ones
 
+  print(eq)
   #replace fraction with decimal
   strEq = str(eq)
 
@@ -123,9 +128,9 @@ def toDec(places, values):
   outVars = [] #an array to store the output values
   for i in places: #loop over the number of digits in each base ten var
     tot = 0
-    i+= 1
+    i+= 2
     for j in range(i): #loop over the cooresponding binary place vals
-      tot += 2**(j-1) * values[pos] #convert to decimal
+      tot += 2**(j-2) * values[pos] #convert to decimal
       pos += 1
     outVars.append(tot) #append the result to the output array
   return(outVars)
