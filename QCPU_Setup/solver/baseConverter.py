@@ -38,17 +38,58 @@ def toBin(domain, eq, var):
 
   #replace fraction with decimal
   strEq = str(eq)
+
+  strEq = strEq.replace("(", "")
+  strEq = strEq.replace(")", "")
+
+  termsPosNotSplit = []
+  termsNegNotSplit = []
   termsPos = []
   termsNeg = []
+
   termsPls = strEq.split("+")
   for i in termsPls:
     ii = i.split("-") #split along negative as well
     for j in range(len(ii)):
       if(j > 0): #if not the first entry (not positive)
-        termsNeg.append(ii[j])
+        if("*" in ii[j]): #if there is a "*" in this term
+          termsNegNotSplit.append(ii[j])
+        else:
+          termsNeg.append(ii[j])
+        
       else:
-        termsPos.append(ii[j])
+        if("*" in ii[j]): #if there is a "*" in this term
+          termsPosNotSplit.append(ii[j])
+        else:
+          termsPos.append(ii[j])
+
+  for i in termsPosNotSplit: #split along * and add to new array
+    ii = i.split("*")
+    for j in ii:
+      if ("/" in j):
+        divisor = float(j.split("/")[1]) #find the divisor
+        j = j[:-(len(j) - j.find("/")):] #remove everything after "/" (included)
+        j = str(1/divisor) + "*" + j #multiply by 1/divisor
+    reCon = ""
+    for j in ii:
+      reCon += j + "*"
+    reCon = reCon[:-2:]
+    i = reCon
+
+  for i in termsNegNotSplit: #split along * and add to new array
+    ii = i.split("*")
+    for j in ii:
+      if ("/" in j):
+        divisor = float(j.split("/")[1]) #find the divisor
+        j = j[:-(len(j) - j.find("/")):] #remove everything after "/" (included)
+        j = str(1/divisor) + "*" + j #multiply by 1/divisor
+    reCon = ""
+    for j in ii:
+      reCon += j + "*"
+    reCon = reCon[:-2:]
+    i = reCon
     
+
   for i in range(len(termsPos)):
     if("/" in termsPos[i]): #for all terms containing "/""
       divisor = float(termsPos[i].split("/")[1]) #find the divisor
@@ -62,9 +103,13 @@ def toBin(domain, eq, var):
   strEq = ""
   for i in termsPos:
     strEq += i + " + "
+  for i in termsPosNotSplit:
+    strEq += i + " + "
   strEq = strEq[:-3]
   strEq += " - "
   for i in termsNeg:
+    strEq += i + " - "
+  for i in termsNegNotSplit:
     strEq += i + " - "
   strEq = strEq[:-3]
   print(strEq)
