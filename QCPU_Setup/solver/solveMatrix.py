@@ -1,5 +1,5 @@
 #function to convert input function to bqm (and return the matrix), as accurately as possible
-def solvMatrix(eq, inVars, Max):
+def SolvMatrix(eq, inVars, Max):
 
   numOfVars = len(inVars)
 
