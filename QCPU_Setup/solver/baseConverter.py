@@ -1,7 +1,7 @@
 from sympy import *
 
 #funtion to convert the input into a binary function:
-def toBin(domain, eq, var):
+def ToBin(domain, eq, var):
   numOfVars = len(var)
   for i in var:
     vars()[i] = symbols(i) #initiate the symbols variables
@@ -123,7 +123,7 @@ def toBin(domain, eq, var):
 
     
 #function to convert the binary results into base 10
-def toDec(places, values):
+def ToDec(places, values):
   pos = 0 #keep track of the place value that we are on
   outVars = [] #an array to store the output values
   for i in places: #loop over the number of digits in each base ten var
