@@ -4,7 +4,7 @@ import dwavebinarycsp
 
 
 #function to solve for the minimum energy posibility:
-def solveExtreme(bqm):
+def SolveExtreme(bqm):
   # Define the workflow
   iteration = hybrid.RacingBranches(
       hybrid.InterruptableTabuSampler(),
@@ -32,7 +32,7 @@ def solveExtreme(bqm):
   
 
 #function to set the values of the bqm matrix for the dwave system to minimize/maximize
-def setMatrix(matrix, numOfVars):
+def SetMatrix(matrix, numOfVars):
   equal = []
   dif = []
   for i in range(numOfVars):
