@@ -21,7 +21,10 @@ file_put_contents('storage.txt', $WriteMyRequest, FILE_APPEND);
 file.close()
 store = open("/var/www/html/storage.txt","w+")
 store.write(".")
+store = open("/var/www/html/results.txt", "w+")
+store.write(".")
 store.close()
+
 
 usr = " "
 from os import path
