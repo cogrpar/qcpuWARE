@@ -10,6 +10,18 @@ def DefVars(numOfVars):
     vars.append("v" + str(i))
   return vars
 
+def ReturnResult(results): #function to write results to result webserver file
+  res = open("/var/www/html/storage.txt","w+")
+  resRead = open("var/www/html/storage.txt","r")
+  #check to see if the file is empty
+  data = resRead.read()
+  res.write(results)
+  res.close()
+  resRead.close()
+  
+def GetServerIn(): #this function gets the required info from the server file
+  
+
 #code
 domain = [4, 4, 4, 4] #really we would get this array from webserver
 numOfVars = len(domain)
