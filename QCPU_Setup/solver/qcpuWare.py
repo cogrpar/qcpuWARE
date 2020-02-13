@@ -11,22 +11,28 @@ def DefVars(numOfVars):
   return vars
 
 def ReturnResult(results): #function to write results to result webserver file
-  res = open("/var/www/html/storage.txt","w+")
-  resRead = open("var/www/html/storage.txt","r")
-  #check to see if the file is empty
-  data = resRead.read()
+  res = open("/var/www/html/results.txt","w+")
   res.write(results)
   res.close()
-  resRead.close()
   
-def GetServerIn(): #this function gets the required info from the server file
+def GetInput(): #function to take the input from the server file 
+  inp = open("/var/www/html/storage.txt","w+")
+  strIn = input.read()
+  inSplit = strIn.split("\n")
+  #the first term in the file should be the domain array.  so we will extract that
+  #the second term in the file should be the 
+  
   
 
 #code
 domain = [4, 4, 4, 4] #really we would get this array from webserver
 numOfVars = len(domain)
-var = ["v0", "v1", "v2", "v3"] #really we would get this array from webserver
 
+#generate array containing variables:
+var = []
+for i in range(numOfVars):
+  var.append("v" + str(i))
+  
 for i in var: #this defines each variable using sympy's symbols function
   vars()[i] = symbols(i)
 
