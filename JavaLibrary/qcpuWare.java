@@ -94,7 +94,7 @@ class qcpuWare{
 
   private String ReadServer(String ip) throws IOException { //function to get the output of the server:
     Scanner scan = new Scanner();
-    String output = scan(new URL("http://192.168.1.51/result").openStream(), "UTF-8").useDelimiter("\\A").next();
+    String output = scan(new URL("http://" + ip + "/result").openStream(), "UTF-8").useDelimiter("\\A").next();
     scan.close();
 
     return output;
