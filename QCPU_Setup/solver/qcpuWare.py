@@ -19,8 +19,9 @@ def GetInput(): #function to take the input from the server file
   inp = open("/var/www/html/storage.txt","w+")
   strIn = input.read()
   inSplit = strIn.split("\n")
-  #the first term in the file should be the domain array.  so we will extract that
-  #the second term in the file should be the 
+  #the first term in the file should be the domain array, so we will extract that
+  #the second term in the file should be the equation
+  #the third term in the file should be the min/max boolean
   
   
 
