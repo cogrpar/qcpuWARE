@@ -35,7 +35,7 @@ def GetInput(): #function to take the input from the server file
   #the third term in the file should be the min/max boolean
   minMaxBool = False
   minMax = inSplit[2]
-  if ("true" in minMax):
+  if ("True" in minMax):
     minMaxBool = True
     
   #clear the input file
@@ -45,6 +45,17 @@ def GetInput(): #function to take the input from the server file
     
   Return = [dom, eq, minMaxBool] #add all components to an array and return it
   return (Return)
+
+#function that checks to see if the storage file is empty
+def EmptyInput():
+  inp = open("/var/www/html/storage.txt","r+")
+  strIn = inp.read()
+  inp.close()
+  
+  if("\n" in strIn):
+    return (True)
+  else:
+    return (False)
 
 #code
 domain = [4, 4, 4, 4] #really we would get this array from webserver
