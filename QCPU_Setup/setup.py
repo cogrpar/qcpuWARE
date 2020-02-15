@@ -16,12 +16,11 @@ file.write('''<?php
 if($_REQUEST['input']){ //append to the file with the solver input
     $var1 = $_REQUEST['input'];
     $WriteMyRequest=$var1;
-    //file_put_contents('/var/www/html/storage.txt', ' ', FILE_APPEND);
     file_put_contents('/var/www/html/storage.txt', $WriteMyRequest);
     echo "printed";
 }
 if($_REQUEST['clrRes']){ //clear result file
-    file_put_contents('results.txt', ' ', FILE_APPEND);
+    file_put_contents('/var/www/html/results.txt', ' ');
     echo "cleared";
 }
 ?>''')
