@@ -16,11 +16,13 @@ file.write('''<?php
 if($_REQUEST['input']){ //append to the file with the solver input
     $var1 = $_REQUEST['input'];
     $WriteMyRequest=$var1;
-    file_put_contents('storage.txt', ' ', FILE_APPEND);
-    file_put_contents('storage.txt', $WriteMyRequest, FILE_APPEND);
+    //file_put_contents('/var/www/html/storage.txt', ' ', FILE_APPEND);
+    file_put_contents('/var/www/html/storage.txt', $WriteMyRequest);
+    echo "printed";
 }
 if($_REQUEST['clrRes']){ //clear result file
     file_put_contents('results.txt', ' ', FILE_APPEND);
+    echo "cleared";
 }
 ?>''')
 file.close()
@@ -29,6 +31,11 @@ store.write(".")
 store = open("/var/www/html/results.txt", "w+")
 store.write(".")
 store.close()
+
+#give read/write permissions to the server user:
+usrPer = subprocess.Popen(["chown www-data /var/www/html/*"], shell=True)
+usrPer.wait()
+
 
 
 usr = " "
