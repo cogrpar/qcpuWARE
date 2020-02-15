@@ -2,6 +2,7 @@
 from baseConverter import *
 from solveBQM import *
 from solveMatrix import *
+from sympy import *
 
 #function to define the variables given the number of vars
 def DefVars(numOfVars):
@@ -16,14 +17,34 @@ def ReturnResult(results): #function to write results to result webserver file
   res.close()
   
 def GetInput(): #function to take the input from the server file 
-  inp = open("/var/www/html/storage.txt","w+")
-  strIn = input.read()
+  inp = open("/var/www/html/storage.txt","r+")
+  strIn = inp.read()
+  inp.close()
   inSplit = strIn.split("\n")
   #the first term in the file should be the domain array, so we will extract that
+  strDom = inSplit[0].split(", ") #split along each term of the array
+  strDom[0] = strDom.replace("[", "")
+  strDom[(len(strDom)-1)] = strDom[(len(strDom)-1)].replace("]", "")
+  dom = []
+  for i in strDom:
+    dom.append(double(i))
+    
   #the second term in the file should be the equation
+  eq = parse_expr(inSplit[1], evaluate=False)
+  
   #the third term in the file should be the min/max boolean
-  
-  
+  minMaxBool = False
+  minMax = inSplit[2]
+  if ("true" in minMax):
+    minMaxBool = True
+    
+  #clear the input file
+  inp = open("/var/www/html/storage.txt","w+")
+  inp.write("")
+  inp.close()
+    
+  Return = [dom, eq, minMaxBool] #add all components to an array and return it
+  return (Return)
 
 #code
 domain = [4, 4, 4, 4] #really we would get this array from webserver
