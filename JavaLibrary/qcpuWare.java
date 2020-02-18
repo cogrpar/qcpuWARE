@@ -6,6 +6,8 @@ import java.util.Scanner;
 
 //so what we need to get from the server (and have the java code generate) is the domain array, the equation, and the min/max boolean
 class qcpuWare{
+  
+  public String serverIP; //this variable stores the server's ip address
 
   public String DomainSet(double[] domain){ //function that sends the domain array to the qcpu
 
@@ -44,8 +46,10 @@ class qcpuWare{
     data = Format(data);
 
     //this variable is the ip addr of the server:
-    ip = GetQcpuIp();
+    ip = serverIP;
 
+    //clear the results file
+    String send = new Scanner(new URL("http://" + ip + "/storage.txt/get?clrRes=True").openStream(), "UTF-8").useDelimiter("\\A").next();
     //send string to server
     String send = new Scanner(new URL("http://" + ip + "/storage.txt/get?input=" + data).openStream(), "UTF-8").useDelimiter("\\A").next();
         
@@ -66,11 +70,6 @@ class qcpuWare{
     double[] output = new double[0];
 
     output = StringToArray(arrayResult);
-    
-    output[0] = 0;
-    output[1] = 0;
-    output[2] = 0;
-    output[3] = 0;
 
     return output;
 
@@ -85,11 +84,9 @@ class qcpuWare{
 
     return output;
   }
-
-  private String GetQcpuIp(){ //this function is used to get the server's ip addr, by reading it from a file
-
-    String ip = "http://192.168.1.51"; //we normally get this from file
-    return (ip);
+              
+  public void SetQcpuIP(String ip){ //this function sets the value of the ip variable, which the user specifies in their code
+    serverIP = ip;
   }
 
   private String ReadServer(String ip) throws IOException { //function to get the output of the server:
@@ -112,8 +109,7 @@ class qcpuWare{
 
   }
 
-  private double[] StringToArray(String input){
-    //this function converts the input string of an array into a double[] array
+  private double[] StringToArray(String input){ //this function converts the input string of an array into a double[] array
     String[] inputSplit = input.split(", ");
     inputSplit[(inputSplit.length)-1] = inputSplit[(inputSplit.length)-1].replace("]", ""); //reformat first and last entry
     inputSplit[0] = inputSplit[0].replace("]", "");
