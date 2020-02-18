@@ -8,6 +8,9 @@ import java.util.Scanner;
 class qcpuWare{
   
   public String serverIP; //this variable stores the server's ip address
+  
+  //these funtions are called by the user, and each specify the type of problem that will be sent to the server
+  //###########################################################################################################//
 
   public String DomainSet(double[] domain){ //function that sends the domain array to the qcpu
 
@@ -39,6 +42,9 @@ class qcpuWare{
     return eqStr;
 
   }
+  
+  //this function gets the result from the server, and returns it
+  //#############################################################//
 
   public double[] SendToQCPU(String data) throws IOException {//function to send information as a string to the server running on the qcpu
 
@@ -75,6 +81,9 @@ class qcpuWare{
 
   }
 
+  //these functions are all used to manipulate the data being sent to, and returning from the server
+  //################################################################################################//
+  
   private String Format(String input){ //this function formats the input properly to be inserted into a url
     String[] revised = input.split(" ");
     String output = "";
