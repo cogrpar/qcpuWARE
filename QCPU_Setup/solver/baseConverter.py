@@ -6,6 +6,7 @@ def ToBin(domain, eq, var):
   for i in var:
     vars()[i] = symbols(i) #initiate the symbols variables
 
+  print(eq)
   #change variable names to avoid mixups:
   for i in range(numOfVars):
     eq = eq.subs(vars()["v" + str(i)], "v" + str(i)+"temp") #temprarily swap the names of the variables to avoid mixups when substituting
@@ -143,49 +144,52 @@ def ToBin(domain, eq, var):
   #now we can loop over the positives and negatives, and arrange them in decending order
   largest = [0, 0]
 
-  while True:
-    largest = [0, 0]
-    for i in range(len(negative)):
-      #find the number that this term is multiplied by
-      fac = 1
-      for m in negative[i].split("*"):
-        try:
-          fac = float(m)
-        except:
-          if(fac == 1):
-            fac = 1
-      if (fac > largest[0]):
-        #if this term is the largest coefficient yet...
-        largest[0] = fac
-        largest[1] = i
- 
-    negativeOrd.append(negative[largest[1]])
-    negative.pop(largest[1])
-    if(len(negative) == 0): #if all terms have been sorted
-      break
+  if (len(negative) > 0):
 
-    
-  while True:
-    largest = [0, 0]
+    while True:
+      largest = [0, 0]
+      for i in range(len(negative)):
+        #find the number that this term is multiplied by
+        fac = 1
+        for m in negative[i].split("*"):
+          try:
+            fac = float(m)
+          except:
+            if(fac == 1):
+              fac = 1
+        if (fac > largest[0]):
+          #if this term is the largest coefficient yet...
+          largest[0] = fac
+          largest[1] = i
+
+      negativeOrd.append(negative[largest[1]])
+      negative.pop(largest[1])
+      if(len(negative) == 0): #if all terms have been sorted
+        break
+
+  if(len(positive) > 0):
+
+    while True:
+      largest = [0, 0]
       
-    for i in range(len(positive)):
-      #find the number that this term is multiplied by
-      fac = 1
-      for m in positive[i].split("*"):
-        try:
-          fac = float(m)
-        except:
-          if(fac == 1):
-            fac = 1
-      if (fac > largest[0]):
-        #if this term is the largest coefficient yet...
-        largest[0] = fac
-        largest[1] = i
+      for i in range(len(positive)):
+        #find the number that this term is multiplied by
+        fac = 1
+        for m in positive[i].split("*"):
+          try:
+            fac = float(m)
+          except:
+            if(fac == 1):
+              fac = 1
+        if (fac > largest[0]):
+          #if this term is the largest coefficient yet...
+          largest[0] = fac
+          largest[1] = i
 
-    positiveOrd.append(positive[largest[1]])
-    positive.pop(largest[1])
-    if(len(positive) == 0): #if all terms have been sorted
-      break
+      positiveOrd.append(positive[largest[1]])
+      positive.pop(largest[1])
+      if(len(positive) == 0): #if all terms have been sorted
+        break
 
   #now reconstruct the equation
   strEq = positiveOrd[0]
