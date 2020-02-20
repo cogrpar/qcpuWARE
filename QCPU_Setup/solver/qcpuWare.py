@@ -3,6 +3,7 @@ from baseConverter import *
 from solveBQM import *
 from solveMatrix import *
 from sympy import *
+from sympy.parsing.sympy_parser import parse_expr
 from time import sleep
 
 #function to define the variables given the number of vars
@@ -12,7 +13,7 @@ def DefVars(numOfVars):
     vars.append("v" + str(i))
   return vars
 
-def ReturnResult(results): #function to write results to result webserver file
+def ReturnResults(results): #function to write results to result webserver file
   res = open("/var/www/html/results.txt","w+")
   res.write(results)
   res.close()
@@ -24,12 +25,13 @@ def GetInput(): #function to take the input from the server file
   inSplit = strIn.split("\n")
   #the first term in the file should be the domain array, so we will extract that
   strDom = inSplit[0].split(", ") #split along each term of the array
-  strDom[0] = strDom.replace("[", "")
+  strDom[0] = strDom[0].replace("[", "")
   strDom[(len(strDom)-1)] = strDom[(len(strDom)-1)].replace("]", "")
   dom = []
+  
   for i in strDom:
-    dom.append(double(i))
-    
+    dom.append(float(i))
+  print(dom)  
   #the second term in the file should be the equation
   eq = parse_expr(inSplit[1], evaluate=False)
   
@@ -53,9 +55,9 @@ def EmptyInput():
   inp.close()
   
   if("\n" in strIn):
-    return (True)
-  else:
     return (False)
+  else:
+    return (True)
 
 ####################  code  ####################
 while True: #run repeatedly in the background
@@ -76,7 +78,7 @@ while True: #run repeatedly in the background
 
     #now solve for the matrix:
     inVars = DefVars(numOfVars)
-    matrix = SolvMatrix(EQ, inVars, nimMax) #set to true to maximise result. Really we would get this boolean from webserver
+    matrix = SolvMatrix(EQ, inVars, minMax) #set to true to maximise result. Really we would get this boolean from webserver
 
     #send to dwave to solve for max/min:
     exec(SetMatrix(matrix, numOfVars))
@@ -84,8 +86,9 @@ while True: #run repeatedly in the background
 
     #convert the results back to decimal and send them to the webserver:
     results = ToDec(places, vals)
-    #print(results)
-    ReturnResults(results)
+    result = "["
+    result += ', '.join(str(i) for i in results) + "]"
+    ReturnResults(result)
     
   else: #if there is no input, then wait a bit and check again
     sleep(0.3)
