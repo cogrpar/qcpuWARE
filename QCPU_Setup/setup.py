@@ -103,16 +103,17 @@ if (platform == "n"): #if other platform, just use pip
     sym.wait()
     
     
-
+    
+#get root password, so that we can use it to execute solver as root on startup
+root_pass = input("root password:\n")
 #append command to start code on boot
-onBoot = open("/etc/init.d/qcpu.sh", "a+")
-prg1 = os.path.dirname(os.path.abspath(__file__)).replace("setup.py", "solver/qcpuWare.py") #get the location of the solver file
-progrms = [] #put the name of each program in this list to write them to the contrab file so they run on boot...
+onBoot = open("/home/" + usr + "/.bashrc", "a+")
+prg1 = "echo " + root_pass + " | sudo -S " + os.path.dirname(os.path.abspath(__file__)).replace("setup.py", "") + "/solver/qcpuWare.py" #get the location of the solver file
+progrms = [prg1] #put the name of each program in this list to write them to the contrab file so they run on boot...
 for progrm in progrms:
     onBoot.write(progrm + "\n")
 onBoot.close()
-mkEx = subprocess.Popen(["chmod +x /etc/init.d/qcpu.sh"], shell=True)
-mkEx.wait()
+
 
 
 
