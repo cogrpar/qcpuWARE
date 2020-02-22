@@ -106,7 +106,7 @@ if (platform = "n"): #if other platform, just use pip
 
 #append command to start code on boot
 onBoot = open("/etc/init.d/qcpu.sh", "a+")
-prg1 = os.path.dirname(os.path.abspath(__file__))).replace("setup.py", "solver/qcpuWare.py") #get the location of the solver file
+prg1 = os.path.dirname(os.path.abspath(__file__)).replace("setup.py", "solver/qcpuWare.py") #get the location of the solver file
 progrms = [] #put the name of each program in this list to write them to the contrab file so they run on boot...
 for progrm in progrms:
     onBoot.write(progrm + "\n")
