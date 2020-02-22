@@ -98,6 +98,9 @@ if (platform == "y"):
 if (platform = "n"): #if other platform, just use pip
     pip_method = subprocess.Popen(["pip3 install dwave-ocean-sdk"], shell=True)
     pip_method.wait()
+    #import sympy
+    sym = subprocess.Popen(["pip3 install sympy"], shell=True)
+    sym.wait()
     
     
 
