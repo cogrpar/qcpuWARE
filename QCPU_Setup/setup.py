@@ -49,41 +49,55 @@ while True:
     else:
         print ("invalid username...  ")
         
-#now copy the dwave python librarys to the correct locations
-for filename in os.listdir("DWave-library/site-packages"):
-    pyVer = sys.version
-    pyVerSplit = pyVer.split(" ")
-    pyVer = pyVerSplit[0]
-    pyVerSplit = pyVer.split(".")
-    pyVer = (pyVerSplit[0] + "." + pyVerSplit[1])
-    oLoc = ["DWave-library/site-packages/", filename]
-    nLoc = ["/home/", usr, "/.local/lib/python", pyVer, "/site-packages/"]
-    dir1 = ''.join(str(v) for v in oLoc)
-    dir2 = ''.join(str(w) for w in nLoc)
-    mvSite = subprocess.Popen(["mv", dir1, dir2])
-    mvSite.wait()
-    print ("moved ", dir1, " to new location: ", dir2)
-    
-for filename in os.listdir("DWave-library/dist-packages"):
-    pyVer = sys.version
-    pyVerSplit = pyVer.split(" ")
-    pyVer = pyVerSplit[0]
-    pyVerSplit = pyVer.split(".")
-    pyVer = (pyVerSplit[0] + "." + pyVerSplit[1])
-    oLoc = ["DWave-library/dist-packages/", filename]
-    nLoc = ["/usr/local/lib/python", pyVer, "/dist-packages/"]
-    dir1 = ''.join(str(v) for v in oLoc)
-    dir2 = ''.join(str(w) for w in nLoc)
-    mvDist = subprocess.Popen(["mv", dir1, dir2])
-    mvDist.wait()
-    print ("moved ", dir1, " to new location: ", dir2)
-#import cloud client
-cloud = subprocess.Popen(["pip3 install dwave-cloud-client"], shell=True)
-cloud.wait()
-#import sympy
-sym = subprocess.Popen(["pip3 install sympy"], shell=True)
-sym.wait()
+#now check to see if we are using a raspberry pi (or similar device) or not
+#the pi has trouble using pip to install the dwave libraries, so we copy the prebuilt librariess to the correct files
+#for other platforms, we can just use pip
+while True:
+    platform = input("Are you using a raspberry pi or other device with similar architecture? (y = yes, n = no):")
+    if (platform == "y" or platform == "n"):
+        break
+    else:
+        print("err; pease enter either n or y\n")
+        
+if (platform == "y"):
+    #now copy the dwave python librarys to the correct locations
+    for filename in os.listdir("DWave-library/site-packages"):
+        pyVer = sys.version
+        pyVerSplit = pyVer.split(" ")
+        pyVer = pyVerSplit[0]
+        pyVerSplit = pyVer.split(".")
+        pyVer = (pyVerSplit[0] + "." + pyVerSplit[1])
+        oLoc = ["DWave-library/site-packages/", filename]
+        nLoc = ["/home/", usr, "/.local/lib/python", pyVer, "/site-packages/"]
+        dir1 = ''.join(str(v) for v in oLoc)
+        dir2 = ''.join(str(w) for w in nLoc)
+        mvSite = subprocess.Popen(["mv", dir1, dir2])
+        mvSite.wait()
+        print ("moved ", dir1, " to new location: ", dir2)
 
+    for filename in os.listdir("DWave-library/dist-packages"):
+        pyVer = sys.version
+        pyVerSplit = pyVer.split(" ")
+        pyVer = pyVerSplit[0]
+        pyVerSplit = pyVer.split(".")
+        pyVer = (pyVerSplit[0] + "." + pyVerSplit[1])
+        oLoc = ["DWave-library/dist-packages/", filename]
+        nLoc = ["/usr/local/lib/python", pyVer, "/dist-packages/"]
+        dir1 = ''.join(str(v) for v in oLoc)
+        dir2 = ''.join(str(w) for w in nLoc)
+        mvDist = subprocess.Popen(["mv", dir1, dir2])
+        mvDist.wait()
+        print ("moved ", dir1, " to new location: ", dir2)
+    #import cloud client
+    cloud = subprocess.Popen(["pip3 install dwave-cloud-client"], shell=True)
+    cloud.wait()
+    #import sympy
+    sym = subprocess.Popen(["pip3 install sympy"], shell=True)
+    sym.wait()
+    
+if (platform = "n"): #if other platform, just use pip
+    pip_method = subprocess.Popen(["pip3 install dwave-ocean-sdk"], shell=True)
+    pip_method.wait()
     
     
 
