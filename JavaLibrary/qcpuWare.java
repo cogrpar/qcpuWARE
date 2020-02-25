@@ -6,6 +6,7 @@ import java.util.Scanner;
 public class qcpuWare{
 
     public static String serverIP; //this variable stores the server's ip address
+    public static String serverPw = "";
 
     //these funtions are called by the user, and each specify the type of problem that will be sent to the server
     //###########################################################################################################//
@@ -47,6 +48,7 @@ public class qcpuWare{
     public static double[] SendToQCPU(String data) throws IOException {//function to send information as a string to the server running on the qcpu
 
         //format the data:
+        data = serverPw + "%0A" + data
         data = Format(data);
 
         //this variable is the ip addr of the server:
@@ -99,6 +101,10 @@ public class qcpuWare{
 
     public static void SetQcpuIP(String ip){ //this function sets the value of the ip variable, which the user specifies in their code
         serverIP = ip;
+    }
+    
+    public static void SetQcpuPw(String pw){
+       serverPw = pw; 
     }
 
     private static String ReadServer(String ip) throws IOException { //function to get the output of the server:
