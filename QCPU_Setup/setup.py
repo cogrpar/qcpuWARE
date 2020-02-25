@@ -12,6 +12,8 @@ installWS.wait()
 #create files
 file = open("/var/www/html/storage.php","w+")
 pw = input("specify a password for server (optional): ")
+if(pw == ""):#give pw a default value if blank
+    pw = "." 
 file.write('''<?php
 //this script allows the users computer to communicate with the QCPU...
 $_pw = "''' + pw + '''" + "\n";
