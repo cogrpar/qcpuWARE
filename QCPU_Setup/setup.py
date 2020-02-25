@@ -14,11 +14,14 @@ file = open("/var/www/html/storage.php","w+")
 pw = input("specify a password for server (optional): ")
 file.write('''<?php
 //this script allows the users computer to communicate with the QCPU...
+$_pw = "''' + pw + '''" + "\n";
 if($_REQUEST['input']){ //append to the file with the solver input
     $var1 = $_REQUEST['input'];
-    $WriteMyRequest=$var1;
-    file_put_contents('/var/www/html/storage.txt', $WriteMyRequest);
-    echo "printed";
+    if (strpos($var1, $_pw) !== false){ //if pw is contained in input
+        $WriteMyRequest=str_replace($_pw, "", $var1); //get rid of pw
+        file_put_contents('/var/www/html/storage.txt', $WriteMyRequest);
+        echo "printed";
+    }
 }
 if($_REQUEST['clrRes']){ //clear result file
     file_put_contents('/var/www/html/results.txt', ' ');
