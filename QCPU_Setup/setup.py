@@ -11,6 +11,7 @@ installWS = subprocess.Popen(["apt-get install apache2 php libapache2-mod-php li
 installWS.wait()
 #create files
 file = open("/var/www/html/storage.php","w+")
+pw = input("specify a password for server (optional): ")
 file.write('''<?php
 //this script allows the users computer to communicate with the QCPU...
 if($_REQUEST['input']){ //append to the file with the solver input
