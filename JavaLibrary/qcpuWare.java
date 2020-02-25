@@ -6,7 +6,7 @@ import java.util.Scanner;
 public class qcpuWare{
 
     public static String serverIP; //this variable stores the server's ip address
-    public static String serverPw = "";
+    public static String serverPw = ".";
 
     //these funtions are called by the user, and each specify the type of problem that will be sent to the server
     //###########################################################################################################//
