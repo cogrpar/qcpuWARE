@@ -108,7 +108,7 @@ if (platform == "n"): #if other platform, just use pip
 root_pass = input("root password:\n")
 #append command to start code on boot
 onBoot = open("/home/" + usr + "/.bashrc", "a+")
-prg1 = "echo " + root_pass + " | sudo -S " + os.path.dirname(os.path.abspath(__file__)).replace("setup.py", "") + "/solver/qcpuWare.py" #get the location of the solver file
+prg1 = "echo " + root_pass + " | sudo -S python3" + os.path.dirname(os.path.abspath(__file__)).replace("setup.py", "") + "/solver/qcpuWare.py" #get the location of the solver file
 progrms = [prg1] #put the name of each program in this list to write them to the contrab file so they run on boot...
 for progrm in progrms:
     onBoot.write(progrm + "\n")
@@ -131,3 +131,4 @@ ping.wait()
 
 #all done
 print ("setup complete")
+
