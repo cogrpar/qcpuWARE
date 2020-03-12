@@ -141,12 +141,9 @@ if ("install" in sys.argv[1]):
 if ("update" in sys.argv[1]):
 	#get file location
 	path = os.path.dirname(os.path.abspath(__file__)).replace("setup.py", "")
+	print(path)
 	path = path.replace("/QCPU_Setup", "")
 	print(path)
-	#change dir
-	os.chdir(path.replace("/qcpuWare", ""))
-	#rename this folder so we can clone a new one	
-	os.rename(path, (path.replace("qcpuWare", "null")))
 	#remove autorun code
 	usr = " "
 	from os import path
@@ -162,7 +159,7 @@ if ("update" in sys.argv[1]):
 
 	auto = open("/home/" + usr + "/.bashrc", "a+")
 
-	root_pass = input("root password:\n")
+	root_pass = input("root password:")
 
 	content = auto.read()
 	content = content.replace("echo " + root_pass + " | sudo -S python3 " + os.path.dirname(os.path.abspath(__file__)).replace("setup.py", "") + "/solver/qcpuWare.py", "")
@@ -172,11 +169,14 @@ if ("update" in sys.argv[1]):
 	writeAuto.write(content)
 	writeAuto.close()
 
+	#change dir name
+	cd = subprocess.Popen(["(cd " + "/home/" + usr + " && mv qcpuWARE null)"], shell=True)
+	cd.wait()
+	
 	#now clone a new repo and delete this one (and start setup.py install again)
-	clone = subprocess.Popen(["git clone https://github.com/cogrpar/qcpuWARE.git"], shell=True)
+	clone = subprocess.Popen(["(cd /home/" + usr + " && git clone https://github.com/cogrpar/qcpuWARE.git)"], shell=True)
 	clone.wait()
-	os.system("python3 qcpuWare/QCPU_Setup/setup.py install")
-	os.system("rm -R null")
+	os.system("(cd /home/" + usr + "/qcpuWare/QCPU_Setup/ && python3 setup.py install")
 	
 
 #invalid arg
