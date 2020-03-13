@@ -176,10 +176,11 @@ if ("update" in sys.argv[1]):
 	#now clone a new repo and delete this one (and start setup.py install again)
 	clone = subprocess.Popen(["(cd /home/" + usr + " && git clone https://github.com/cogrpar/qcpuWARE.git)"], shell=True)
 	clone.wait()
-	os.system("(cd /home/" + usr + "/qcpuWare/QCPU_Setup/ && python3 setup.py install")
+	os.system("(cd /home/" + usr + "/qcpuWare/QCPU_Setup/ && python3 setup.py install)")
+
+	os.system("(cd /home/" + usr + " && rm -R null)")
 	
 
 #invalid arg
 else:
 	print("invalid arg: " + sys.argv[1])
-
