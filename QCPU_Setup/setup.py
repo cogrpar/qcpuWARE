@@ -178,7 +178,8 @@ if ("update" in sys.argv[1]):
 	clone.wait()
 	os.system("(cd /home/" + usr + "/qcpuWare/QCPU_Setup/ && python3 setup.py install)")
 
-	os.system("rm -R /home/" + usr + "/null")
+	rm = subprocess.Popen(["rm -R /home/" + usr + "/null"], shell=True)
+	rm.wait()
 	
 
 #invalid arg
