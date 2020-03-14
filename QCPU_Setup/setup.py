@@ -182,5 +182,5 @@ if ("update" in sys.argv[1]):
 	
 
 #invalid arg
-else:
+if ((not ("install" in sys.argv[1])) and (not ("update" in sys.argv[1]))):
 	print("invalid arg: " + sys.argv[1])
