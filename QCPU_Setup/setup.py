@@ -162,7 +162,7 @@ if ("update" in sys.argv[1]):
 	root_pass = input("root password:")
 
 	content = auto.read()
-	content = content.replace("echo " + root_pass + " | sudo -S python3 " + os.path.dirname(os.path.abspath(__file__)).replace("setup.py", "") + "/solver/qcpuWare.py", "")
+	content = content.replace("echo " + root_pass + " | sudo -S python3 " + os.path.dirname(os.path.abspath(__file__)).replace("setup.py", "") + "/solver/qcpuWARE.py", "")
 
 	auto.close()
 	writeAuto = open("/home/" + usr + "/.bashrc", "w")
@@ -176,10 +176,9 @@ if ("update" in sys.argv[1]):
 	#now clone a new repo and delete this one (and start setup.py install again)
 	clone = subprocess.Popen(["(cd /home/" + usr + " && git clone https://github.com/cogrpar/qcpuWARE.git)"], shell=True)
 	clone.wait()
-	os.system("(cd /home/" + usr + "/qcpuWare/QCPU_Setup/ && python3 setup.py install)")
+	os.system("python3 /home/" + usr + "/qcpuWARE/QCPU_Setup/setup.py install")
 
-	rm = subprocess.Popen(["rm -R /home/" + usr + "/null"], shell=True)
-	rm.wait()
+	os.system("rm -R /home/" + usr + "/null")
 	
 
 #invalid arg
