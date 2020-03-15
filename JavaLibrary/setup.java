@@ -15,7 +15,7 @@ class setup{
     else if(args[0] == "update"){
       //git pull
       try{
-        Runtime.getRuntime().exec("git pull");
+        Runtime.getRuntime().exec("git reset --hard && git pull");
       }catch(Exception e){}
     }
     
