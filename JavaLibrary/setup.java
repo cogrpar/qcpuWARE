@@ -21,7 +21,7 @@ class setup{
     
     //else
     else{
-      System.out.println("Invalid arg: " + arg[0]);
+      System.out.println("Invalid arg: " + args[0]);
     }
     
   }
