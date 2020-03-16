@@ -1,19 +1,11 @@
 class setup{
   public static void main (String [] args){
     //this is the instalation code for the java library (execute as root)
-    
-    //if args[0] is install:
-    if(args[0] == "install"){
-      //execute command to add the software to classpath
-      try{
-        String workDir = System.getProperty("user.dir");
-        Runtime.getRuntime().exec("javac -classpath .:" + workDir + " qcpuWare.java");
-      }catch(Exception e){}
-    }
-    
+
     //else if args[0] is update
-    else if(args[0] == "update"){
+    if(args[0].contains("update")){
       //git pull
+      System.out.println("updating...");
       try{
         Runtime.getRuntime().exec("git reset --hard && git pull");
       }catch(Exception e){}
