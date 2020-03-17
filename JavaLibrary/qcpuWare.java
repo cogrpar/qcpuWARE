@@ -48,7 +48,7 @@ public class qcpuWare{
     public static double[] SendToQCPU(String data) throws IOException {//function to send information as a string to the server running on the qcpu
 
         //format the data:
-        data = serverPw + "%0A" + data;
+        data = serverPw + data;
         data = Format(data);
 
         //this variable is the ip addr of the server:
