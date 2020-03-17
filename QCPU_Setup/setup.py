@@ -12,15 +12,23 @@ if ("install" in sys.argv[1]):
 	#start by installing a webserver application and creating the webserver files which allow your computer to communicate with the QCPU
 	installWS = subprocess.Popen(["apt-get install apache2 php libapache2-mod-php libatlas-base-dev", "-y"], shell=True)
 	installWS.wait()
+	#ask the user what they want the server password to be
+	pw = input("What would you like the server's password to be (optional): ")
+	#if no password set, set it to default value of "."
+	if (pw == ""):
+		pw = "."
 	#create files
 	file = open("/var/www/html/storage.php","w+")
 	file.write('''<?php
 	//this script allows the users computer to communicate with the QCPU...
 	if($_REQUEST['input']){ //append to the file with the solver input
 	    $var1 = $_REQUEST['input'];
-	    $WriteMyRequest=$var1;
-	    file_put_contents('/var/www/html/storage.txt', $WriteMyRequest);
-	    echo "printed";
+	    $pw = "''' + pw + '''";
+	    if (strpos($var1, $pw) !== false){
+	         $WriteMyRequest=str_replace($pw+"\n", "", $var1);
+	         file_put_contents('/var/www/html/storage.txt', $WriteMyRequest);
+	         echo "printed";
+	    }
 	}
 	if($_REQUEST['clrRes']){ //clear result file
 	    file_put_contents('/var/www/html/results.txt', ' ');
