@@ -23,30 +23,44 @@ def GetInput(): #function to take the input from the server file
   strIn = inp.read()
   inp.close()
   inSplit = strIn.split("\n")
-  #the first term in the file should be the domain array, so we will extract that
-  strDom = inSplit[0].split(", ") #split along each term of the array
-  strDom[0] = strDom[0].replace("[", "")
-  strDom[(len(strDom)-1)] = strDom[(len(strDom)-1)].replace("]", "")
-  dom = []
   
-  for i in strDom:
-    dom.append(float(i))
-  print(dom)  
-  #the second term in the file should be the equation
-  eq = parse_expr(inSplit[1], evaluate=False)
+  #initiate the return variables
+  data = []
+  mode = ""
   
-  #the third term in the file should be the min/max boolean
-  minMaxBool = False
-  minMax = inSplit[2]
-  if ("True" in minMax):
-    minMaxBool = True
+  #read the first line in the input to determine the mode specified by the user
+  if (inSplit[0] == "funcExtreme"): #if the user specified function extreme solver mode
+    mode = "funcExtreme"
+    #the first term in the file should be the domain array, so we will extract that
+    strDom = inSplit[1].split(", ") #split along each term of the array
+    strDom[1] = strDom[1].replace("[", "")
+    strDom[(len(strDom)-1)] = strDom[(len(strDom)-1)].replace("]", "")
+    dom = []
+
+    for i in strDom:
+      dom.append(float(i))
+    print(dom)  
+    #the second term in the file should be the equation
+    eq = parse_expr(inSplit[2], evaluate=False)
+
+    #the third term in the file should be the min/max boolean
+    minMaxBool = False
+    minMax = inSplit[3]
+    if ("True" in minMax):
+      minMaxBool = True
+
+    #clear the input file
+    inp = open("/var/www/html/storage.txt","w+")
+    inp.write("")
+    inp.close()
     
-  #clear the input file
-  inp = open("/var/www/html/storage.txt","w+")
-  inp.write("")
-  inp.close()
+    data = [dom, eq, minMaxBool]
   
-  return (dom, eq, minMaxBool)
+  elif (inSplit[0] == "BCSP"): #if the mode is binary constraint satisfaction problem solver
+    constraints = inSplit[1]
+    data = constraints.split(";")
+    
+  return (mode, data)
 
 #function that checks to see if the storage file is empty
 def EmptyInput():
@@ -63,32 +77,40 @@ def EmptyInput():
 while True: #run repeatedly in the background
   #check to see if there is any input on the server
   if (not EmptyInput()): 
-    domain, eq, minMax = GetInput()
-    numOfVars = len(domain)
+    mode, data = GetInput()
+    
+    #check to see what mode was set
+    if (mode == "funcExtreme"):
+      domain, eq, minMax = data
+      numOfVars = len(domain)
 
-    #generate array containing variables:
-    var = []
-    for i in range(numOfVars):
-      var.append("v" + str(i))
+      #generate array containing variables:
+      var = []
+      for i in range(numOfVars):
+        var.append("v" + str(i))
 
-    for i in var: #this defines each variable using sympy's symbols function
-      vars()[i] = symbols(i)
+      for i in var: #this defines each variable using sympy's symbols function
+        vars()[i] = symbols(i)
 
-    EQ, numOfVars, places = ToBin(domain, eq, var) #convert function to binary and get it as a string, along with a new variable count and an array used to convert back to decimal
+      EQ, numOfVars, places = ToBin(domain, eq, var) #convert function to binary and get it as a string, along with a new variable count and an array used to convert back to decimal
 
-    #now solve for the matrix:
-    inVars = DefVars(numOfVars)
-    matrix = SolvMatrix(EQ, inVars, minMax) #set to true to maximise result. Really we would get this boolean from webserver
+      #now solve for the matrix:
+      inVars = DefVars(numOfVars)
+      matrix = SolvMatrix(EQ, inVars, minMax) #set to true to maximise result. Really we would get this boolean from webserver
 
-    #send to dwave to solve for max/min:
-    exec(SetMatrix(matrix, numOfVars))
-    vals = SolveExtreme(bqm)
+      #send to dwave to solve for max/min:
+      exec(SetMatrix(matrix, numOfVars))
+      vals = SolveExtreme(bqm)
 
-    #convert the results back to decimal and send them to the webserver:
-    results = ToDec(places, vals)
-    result = "["
-    result += ', '.join(str(i) for i in results) + "]"
-    ReturnResults(result)
+      #convert the results back to decimal and send them to the webserver:
+      results = ToDec(places, vals)
+      result = "["
+      result += ', '.join(str(i) for i in results) + "]"
+      ReturnResults(result)
+      
+    elif (mode == "BCSP"):
+      constraints = data
+      #solve the CPS given the inputs
     
   else: #if there is no input, then wait a bit and check again
     sleep(0.3)
