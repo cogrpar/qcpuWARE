@@ -10,6 +10,29 @@ public class qcpuWare{
 
     //these funtions are called by the user, and each specify the type of problem that will be sent to the server
     //###########################################################################################################//
+    
+    public static String ModeSet(String mode){ //function to set the mode of the qcpu
+        
+        String out = "";
+        
+        if (mode == "funcExtreme"){
+            //if the function extreme solver mode is selected
+            out = "funcExtreme";
+        }
+        
+        else if (mode == "BCSP"){
+            //if the binary constraint satisfaction problem solver mode is selected
+            out = "funcExtreme";
+        }
+        
+        else{
+            System.out.println("Invalid qcpu mode selected: " + mode);    
+        }
+        
+        out = out + "%0A";
+        return (out);
+        
+    }
 
     public static String DomainSet(double[] domain){ //function that sends the domain array to the qcpu
 
@@ -40,6 +63,21 @@ public class qcpuWare{
 
         return eqStr;
 
+    }
+    
+    public static String ConstSet(String[] constraints){ //function to convert array of constraints into a single string to be sent to qcpu
+        
+        String out = "";
+        
+        for (int i = 0; i < (constraints.length - 1); i++){
+            out += constraints[i] + ";";           
+        }
+        
+        //add final entry without the semicolon
+        out += constraints[constraints.length-1];
+        
+        return (out);
+        
     }
 
     //this function gets the result from the server, and returns it
