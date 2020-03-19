@@ -22,7 +22,7 @@ public class qcpuWare{
         
         else if (mode == "BCSP"){
             //if the binary constraint satisfaction problem solver mode is selected
-            out = "funcExtreme";
+            out = "BCSP";
         }
         
         else{
