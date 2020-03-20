@@ -25,7 +25,7 @@ def SolveExtreme(bqm):
   result = resultSplit[0]
   results = result.split(", ") #separate the vars
 
-  #now exttract the numerical results:
+  #now extract the numerical results:
   for i in range(len(results)):
     results[i] = float(results[i].replace((str(i+1) + ": "), ""))
   return(results)
