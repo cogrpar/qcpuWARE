@@ -96,7 +96,7 @@ while True: #run repeatedly in the background
 
       #now solve for the matrix:
       inVars = DefVars(numOfVars)
-      matrix = SolvMatrix(EQ, inVars, minMax) #set to true to maximise result. Really we would get this boolean from webserver
+      matrix = SolvMatrix(EQ, inVars, minMax) #set to true to maximise result
 
       #send to dwave to solve for max/min:
       exec(SetMatrix(matrix, numOfVars))
