@@ -58,7 +58,8 @@ def GetInput(): #function to take the input from the server file
   
   elif (inSplit[0] == "BCSP"): #if the mode is binary constraint satisfaction problem solver
     constraints = inSplit[1]
-    data = constraints.split(";")
+    numOfVars = inSplit[2]
+    data = [constraints.split(";"), numOfVars]
     
   return (mode, data)
 
@@ -96,10 +97,12 @@ while True: #run repeatedly in the background
 
       #now solve for the matrix:
       inVars = DefVars(numOfVars)
-      matrix = SolvMatrix(EQ, inVars, minMax) #set to true to maximise result
+      p = SolvMatrix(EQ, inVars, minMax) #set to true to maximise result
+      exec(p) #define the polynomial that was returned
+      bqm = dimod.BinaryQuadraticModel({}, {}, 0.0, dimod.BINARY)  # QUBO
+      dimod.make_quadratic(poly, 10.0, bqm = bqm) #define the BQM
 
       #send to dwave to solve for max/min:
-      exec(SetMatrix(matrix, numOfVars))
       vals = SolveExtreme(bqm)
 
       #convert the results back to decimal and send them to the webserver:
@@ -109,8 +112,44 @@ while True: #run repeatedly in the background
       ReturnResults(result)
       
     elif (mode == "BCSP"):
-      constraints = data
+      constraints, numOfVars = data
       #solve the CPS given the inputs
+      #make all of the constraints into a big boolean statement
+      boolean = "("
+      for i in constraints:
+          boolean += "(" + i + ") and "
+      boolean = boolean[:-5:]
+      boolean += ")"
+      
+      vars = ""
+      for i in range(numOfVars-1):
+          vars += "v" + str(i) + ", "
+      vars += "v" + str(numOfVars-1)
+
+      exe = '''
+      def const(''' + vars + '''):
+          return''' + boolean + '''
+      '''
+
+      #reformat vars for csp
+      vars = ""
+      for i in range(numOfVars-1):
+          vars += "'v" + str(i) + "', "
+      vars += "'v" + str(numOfVars-1) + "'"
+
+      #execute the function to make it exist
+      exec (exe)
+
+      #define the csp 
+      csp = dwavebinarycsp.ConstraintSatisfactionProblem(dwavebinarycsp.BINARY)
+      add_const = '''
+      csp.add_constraint(const, [''' + vars + '''])'''
+      exec(add_const)
+
+      bqm = dwavebinarycsp.stitch(csp)
+      
+      result = SolveCSP(bqm)
+      ReturnResults(result)
     
   else: #if there is no input, then wait a bit and check again
     sleep(0.3)
