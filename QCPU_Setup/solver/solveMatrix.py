@@ -3,8 +3,7 @@ def SolvMatrix(eq, inVars, Max):
 
   numOfVars = len(inVars)
 
-  w, h = numOfVars, numOfVars
-  matrix = [[0 for x in range(w)] for y in range(h)]
+  poly = """poly = {"""
 
   positive = []
   negative = []
@@ -65,25 +64,15 @@ def SolvMatrix(eq, inVars, Max):
         contained.append(j)
     
     if (len(contained) == 1): #if there is only one variable in the term
-      index = int(contained[0].replace("v", ""))
-      matrix[index][index] = -1 * fac
+      #add polynomial to poly string
+      poly += """('""" + contained[0] + """',): -""" + str(fac) + """, """ 
 
     elif (len(contained) > 1): #if there are several vars
-      vars = []
-      for m in contained:
-        vars.append(int(m.replace("v", "")))
-      #loop over the indexes
-      count = 0
-      for w in vars:
-        for h in vars:
-          if (h < w):
-            if (not (matrix[h][w] == 1 or matrix[h][w] == -1)): #if this entry does not have a value yet:
-              count += 1
-      for w in vars:
-        for h in vars:
-          if (h < w):
-            if (not (matrix[h][w] == 1 or matrix[h][w] == -1)): #if this entry has no value...
-              matrix[h][w] = (-1 * fac)/count
+      varList = ""
+      for n in contained:
+        varList += "'" + n + "', "
+      varList = varList[:-2:]
+      poly += """(""" + varList + """): -""" + str(fac) + """, """
 
   for i in positive: #now do the same thing but with the positives
   
@@ -118,25 +107,16 @@ def SolvMatrix(eq, inVars, Max):
         contained.append(j)
     
     if (len(contained) == 1): #if there is only one variable in the term
-      index = int(contained[0].replace("v", ""))
-      matrix[index][index] = fac
+      #add polynomial to poly string
+      poly += """('""" + contained[0] + """',): """ + str(fac) + """, """ 
 
     elif (len(contained) > 1): #if there are several vars
-      vars = []
-      for m in contained:
-        vars.append(int(m.replace("v", "")))
-      #loop over the indexes
-      count = 0
-      for w in vars:
-        for h in vars:
-          if (h < w):
-            if (not (matrix[h][w] == 1 or matrix[h][w] == -1)): #if this entry does not have a value yet:
-              count += 1
-      for w in vars:
-        for h in vars:
-          if (h < w):
-            if (not (matrix[h][w] == 1 or matrix[h][w] == -1)): #if this entry has no value...
-              matrix[h][w] = fac/count
+      varList = ""
+      for n in contained:
+        varList += "'" + n + "', "
+      varList = varList[:-2:]
+      poly += """(""" + varList + """): """ + str(fac) + """, """
 
-  print(matrix)
-  return matrix
+  poly = poly[:-2:] + """}"""
+
+  return poly
