@@ -60,8 +60,13 @@ def SolvMatrix(eq, inVars, Max):
 
     contained = []
     for j in inVars:
-      if (j in i): #if term i contains var j
-        contained.append(j)
+      confined = i.split(j)
+      if (len(confined)>1):
+        next = confined[1]
+        if (len(next) == 0): #if the var is actually contained (not in a substring)
+          contained.append(j)
+        elif (next[0] == "*"):
+          contained.append(j) #if the var is actually contained (not in a substring)
     
     if (len(contained) == 1): #if there is only one variable in the term
       #add polynomial to poly string
@@ -103,8 +108,13 @@ def SolvMatrix(eq, inVars, Max):
 
     contained = []
     for j in inVars:
-      if (j in i): #if term i contains var j
-        contained.append(j)
+      confined = i.split(j)
+      if (len(confined)>1):
+        next = confined[1]
+        if (len(next) == 0): #if the var is actually contained (not in a substring)
+          contained.append(j)
+        elif (next[0] == "*"):
+          contained.append(j) #if the var is actually contained (not in a substring)
     
     if (len(contained) == 1): #if there is only one variable in the term
       #add polynomial to poly string
