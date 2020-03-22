@@ -26,10 +26,18 @@ def SolveExtreme(bqm):
   results = result.split(", ") #separate the vars
 
   #now extract the numerical results:
-  refined = []
+  refLen = 0
   for i in range(len(results)):
-    if (not("*" in results[i])): #if this is a useful result that only contains one term 
-      refined.append(float(results[i].replace((str(i+1) + ": "), "")))
+    if (not("*" in results[i])):
+      refLen += 1 #make sure that refined is the right length
+  refined = [0] * refLen
+  for i in range(len(results)):
+    if (not("*" in results[i])): #if this is a useful result that only contains one term
+      num = results[i].split(": ")
+      trash, position = num[0].split("v")
+      position = position.replace("'", "")
+      position = int(position) 
+      refined[position] = (float(num[1]))
   return(refined)
 
 
