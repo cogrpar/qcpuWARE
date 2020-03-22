@@ -23,7 +23,7 @@ if ("install" in sys.argv[1]):
 	//this script allows the users computer to communicate with the QCPU...
 	if($_REQUEST['input']){ //append to the file with the solver input
 	    $var1 = $_REQUEST['input'];
-	    $pw = "Thebigpig";
+	    $pw = "''' + pw + '''";
 	    if (strpos($var1, $pw) !== false){
 	         $WriteMyRequest=str_replace($pw, "", $var1);
 		 echo $WriteMyRequest;
