@@ -33,7 +33,7 @@ def GetInput(): #function to take the input from the server file
     mode = "funcExtreme"
     #the first term in the file should be the domain array, so we will extract that
     strDom = inSplit[1].split(", ") #split along each term of the array
-    strDom[1] = strDom[1].replace("[", "")
+    strDom[0] = strDom[0].replace("[", "")
     strDom[(len(strDom)-1)] = strDom[(len(strDom)-1)].replace("]", "")
     dom = []
 
