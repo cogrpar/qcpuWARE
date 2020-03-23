@@ -1,3 +1,5 @@
+package qcpuWare.jar;
+
 import java.io.IOException;
 import java.net.URL;
 import java.util.Scanner;
@@ -6,32 +8,32 @@ import java.util.Scanner;
 public class qcpuWare{
 
     public static String serverIP; //this variable stores the server's ip address
-    public static String serverPw = ".";
+    public static String serverPw = "QCPU";
 
     //these funtions are called by the user, and each specify the type of problem that will be sent to the server
     //###########################################################################################################//
-    
+
     public static String ModeSet(String mode){ //function to set the mode of the qcpu
-        
+
         String out = "";
-        
+
         if (mode == "funcExtreme"){
             //if the function extreme solver mode is selected
             out = "funcExtreme";
         }
-        
+
         else if (mode == "BCSP"){
             //if the binary constraint satisfaction problem solver mode is selected
             out = "BCSP";
         }
-        
+
         else{
-            System.out.println("Invalid qcpu mode selected: " + mode);    
+            System.out.println("Invalid qcpu mode selected: " + mode);
         }
-        
+
         out = out + "%0A";
         return (out);
-        
+
     }
 
     public static String DomainSet(double[] domain){ //function that sends the domain array to the qcpu
@@ -64,20 +66,22 @@ public class qcpuWare{
         return eqStr;
 
     }
-    
-    public static String ConstSet(String[] constraints){ //function to convert array of constraints into a single string to be sent to qcpu
-        
+
+    public static String ConstSet(String[] constraints, int numOfVars){ //function to convert array of constraints into a single string to be sent to qcpu
+
         String out = "";
-        
+
         for (int i = 0; i < (constraints.length - 1); i++){
-            out += constraints[i] + ";";           
+            out += constraints[i] + ";";
         }
-        
+
         //add final entry without the semicolon
         out += constraints[constraints.length-1];
-        
+
+        out += "%0A" + Integer.toString(numOfVars); //add number of binary variables to server input
+
         return (out);
-        
+
     }
 
     //this function gets the result from the server, and returns it
@@ -140,9 +144,9 @@ public class qcpuWare{
     public static void SetQcpuIP(String ip){ //this function sets the value of the ip variable, which the user specifies in their code
         serverIP = ip;
     }
-    
+
     public static void SetQcpuPw(String pw){
-       serverPw = pw; 
+        serverPw = pw;
     }
 
     private static String ReadServer(String ip) throws IOException { //function to get the output of the server:
