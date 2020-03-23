@@ -1,4 +1,5 @@
 from sympy import *
+from sympy.parsing.sympy_parser import parse_expr
 
 #funtion to convert the input into a binary function:
 def ToBin(domain, eq, var):
@@ -41,7 +42,7 @@ def ToBin(domain, eq, var):
 
     eq = eq.subs(("v" + str(i)+"temp"), bina) #substitute the binary vars in for the decimal ones
 
-  #print(eq)
+  eq = expand(eq)
   #replace fraction with decimal
   strEq = str(eq)
 
@@ -118,90 +119,8 @@ def ToBin(domain, eq, var):
   for i in termsNegNotSplit:
     strEq += i + " - "
   strEq = strEq[:-3]
-  print(strEq + "\n")
-
-  #now we need to rearange the terms of the equation so that they go in order of the coefficient of each term.  This should in theory increase the accuracy of the conversion into a bqm
-  positive = []
-  negative = []
-  positiveOrd = []
-  negativeOrd = []
-
-  splitEq = strEq.split("+") #split along the +
-  for i in splitEq:
-    spl = i.split("-") #split along the -
-    for j in range(len(spl)):
-      if (j != 0): #skip over the positive term
-        if (spl[j] == " "): #if there is a blank term
-          pass
-        else:
-          negative.append(spl[j].replace(" ", ""))
-      else: #append the positive term
-        if (spl[j] == " "): #if there is a blank term
-          pass
-        else:
-          positive.append(spl[0].replace(" ", ""))
-
-  #now we can loop over the positives and negatives, and arrange them in decending order
-  largest = [0, 0]
-
-  if (len(negative) > 0):
-
-    while True:
-      largest = [0, 0]
-      for i in range(len(negative)):
-        #find the number that this term is multiplied by
-        fac = 1
-        for m in negative[i].split("*"):
-          try:
-            fac = float(m)
-          except:
-            if(fac == 1):
-              fac = 1
-        if (fac > largest[0]):
-          #if this term is the largest coefficient yet...
-          largest[0] = fac
-          largest[1] = i
-
-      negativeOrd.append(negative[largest[1]])
-      negative.pop(largest[1])
-      if(len(negative) == 0): #if all terms have been sorted
-        break
-
-  if(len(positive) > 0):
-
-    while True:
-      largest = [0, 0]
-      
-      for i in range(len(positive)):
-        #find the number that this term is multiplied by
-        fac = 1
-        for m in positive[i].split("*"):
-          try:
-            fac = float(m)
-          except:
-            if(fac == 1):
-              fac = 1
-        if (fac > largest[0]):
-          #if this term is the largest coefficient yet...
-          largest[0] = fac
-          largest[1] = i
-
-      positiveOrd.append(positive[largest[1]])
-      positive.pop(largest[1])
-      if(len(positive) == 0): #if all terms have been sorted
-        break
-
-  #now reconstruct the equation
-  strEq = positiveOrd[0]
-
-  for i in range(len(positiveOrd)):
-    if (i > 0): #skip the first term
-      strEq += " + " + positiveOrd[i]
-
-  for i in range(len(negativeOrd)):
-    strEq += " - " + negativeOrd[i]
-
-  print (strEq)
+  eq = parse_expr(strEq, evaluate=False)
+  strEq = str(eq)
 
   return (strEq, place, places) #return the string of the binary function, the number of binary vars, and the number of binary digits in each base 10 number, used to convert back to decimal
 
@@ -218,4 +137,3 @@ def ToDec(places, values):
       pos += 1
     outVars.append(tot) #append the result to the output array
   return(outVars)
-
