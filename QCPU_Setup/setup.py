@@ -16,7 +16,7 @@ if ("install" in sys.argv[1]):
 	pw = input("What would you like the server's password to be (optional): ")
 	#if no password set, set it to default value of "."
 	if (pw == ""):
-		pw = "."
+		pw = "QCPU"
 	#create files
 	file = open("/var/www/html/storage.php","w+")
 	file.write('''<?php
