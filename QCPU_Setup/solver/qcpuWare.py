@@ -57,9 +57,10 @@ def GetInput(): #function to take the input from the server file
     data = [dom, eq, minMaxBool]
   
   elif (inSplit[0] == "BCSP"): #if the mode is binary constraint satisfaction problem solver
+    mode = "BCSP"
     constraints = inSplit[1]
     numOfVars = inSplit[2]
-    data = [constraints.split(";"), numOfVars]
+    data = [constraints.split(";"), int(numOfVars)]
     
   return (mode, data)
 
@@ -126,9 +127,8 @@ while True: #run repeatedly in the background
           vars += "v" + str(i) + ", "
       vars += "v" + str(numOfVars-1)
 
-      exe = '''
-      def const(''' + vars + '''):
-          return''' + boolean + '''
+      exe = '''def const(''' + vars + '''):
+        return''' + boolean + '''
       '''
 
       #reformat vars for csp
@@ -142,14 +142,20 @@ while True: #run repeatedly in the background
 
       #define the csp 
       csp = dwavebinarycsp.ConstraintSatisfactionProblem(dwavebinarycsp.BINARY)
-      add_const = '''
-      csp.add_constraint(const, [''' + vars + '''])'''
+      add_const = '''csp.add_constraint(const, [''' + vars + '''])'''
       exec(add_const)
 
       bqm = dwavebinarycsp.stitch(csp)
       
       result = SolveCSP(bqm)
-      ReturnResults(result)
+
+      resultStr = "["
+      for i in result:
+        resultStr += str(i) + ", "
+      resultStr = resultStr[:-2:]
+      resultStr += "]"
+
+      ReturnResults(resultStr)
     
   else: #if there is no input, then wait a bit and check again
     sleep(0.3)
