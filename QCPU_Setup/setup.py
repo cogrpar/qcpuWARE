@@ -65,7 +65,7 @@ if ("install" in sys.argv[1]):
 	#the pi has trouble using pip to install the dwave libraries, so we copy the prebuilt librariess to the correct files
 	#for other platforms, we can just use pip
 	while True:
-		platform = input("Are you using a raspberry pi or other device with similar architecture? (y = yes, n = no):")
+		platform = input("Are you using a raspberry pi or other device with similar architecture (ARM based)? (y = yes, n = no):")
 		if (platform == "y" or platform == "n"):
 			break
 		else:
@@ -75,10 +75,21 @@ if ("install" in sys.argv[1]):
 		#clone ocean-sdk repo and build on this device
 		clone = subprocess.Popen(["git clone https://github.com/dwavesystems/dwave-ocean-sdk.git"], shell=True)
 		clone.wait()
+		#edit the setup.py code to remove packages incompatible with the pi
+		setup = open("dwave-ocean-sdk/setup.py", "r+")
+		packages = setup.read()
+		pos = packages.find("'dwave-tabu==")
+		sub = "'dwave-tabu==" + packages[pos+13] + packages[pos+14] + packages[pos+15] + packages[pos+16] + packages[pos+17] + packages[pos+18] + packages[pos+19]
+		packages = packages.replace(sub, "")  
+		setup.close()
+		setupWrite = open("dwave-ocean-sdk/setup.py", "w")
+		setupWrite.write(packages)
+		setupWrite.close()
+		
 		#build sdk
 		build = subprocess.Popen(["python3 dwave-ocean-sdk/setup.py install"], shell=True)
 		build.wait()
-		'''
+		
 		#now copy the dwave python librarys to the correct locations
 		for filename in os.listdir("DWave-library/site-packages"):
 			pyVer = sys.version
@@ -106,7 +117,7 @@ if ("install" in sys.argv[1]):
 			dir2 = ''.join(str(w) for w in nLoc)
 			mvDist = subprocess.Popen(["mv", dir1, dir2])
 			mvDist.wait()
-			print ("moved ", dir1, " to new location: ", dir2)'''
+			print ("moved ", dir1, " to new location: ", dir2)
 		#import cloud client
 		cloud = subprocess.Popen(["pip3 install dwave-cloud-client"], shell=True)
 		cloud.wait()
