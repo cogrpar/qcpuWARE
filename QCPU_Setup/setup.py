@@ -72,6 +72,13 @@ if ("install" in sys.argv[1]):
 			print("err; pease enter either n or y\n")
 		
 	if (platform == "y"):
+		#clone ocean-sdk repo and build on this device
+		clone = subprocess.Popen(["git clone https://github.com/dwavesystems/dwave-ocean-sdk.git"], shell=True)
+		clone.wait()
+		#build sdk
+		build = subprocess.Popen(["python3 dwave-ocean-sdk/setup.py install"], shell=True)
+		build.wait()
+		'''
 		#now copy the dwave python librarys to the correct locations
 		for filename in os.listdir("DWave-library/site-packages"):
 			pyVer = sys.version
@@ -99,13 +106,13 @@ if ("install" in sys.argv[1]):
 			dir2 = ''.join(str(w) for w in nLoc)
 			mvDist = subprocess.Popen(["mv", dir1, dir2])
 			mvDist.wait()
-			print ("moved ", dir1, " to new location: ", dir2)
+			print ("moved ", dir1, " to new location: ", dir2)'''
 		#import cloud client
 		cloud = subprocess.Popen(["pip3 install dwave-cloud-client"], shell=True)
 		cloud.wait()
 		#import sympy
 		sym = subprocess.Popen(["pip3 install sympy"], shell=True)
-		sym.wait()
+		sym.wait() 
 	    
 	if (platform == "n"): #if other platform, just use pip
 		pip_method = subprocess.Popen(["pip3 install dwave-ocean-sdk"], shell=True)
