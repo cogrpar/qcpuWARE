@@ -81,6 +81,7 @@ if ("install" in sys.argv[1]):
 		pos = packages.find("'dwave-tabu==")
 		sub = "'dwave-tabu==" + packages[pos+13] + packages[pos+14] + packages[pos+15] + packages[pos+16] + packages[pos+17] + packages[pos+18] + packages[pos+19]
 		packages = packages.replace(sub, "")  
+		packages = packages.replace('exec(open("./dwaveoceansdk/package_info.py").read())', 'exec(open("./dwave-ocean-sdk/dwaveoceansdk/package_info.py").read())')
 		setup.close()
 		setupWrite = open("dwave-ocean-sdk/setup.py", "w")
 		setupWrite.write(packages)
