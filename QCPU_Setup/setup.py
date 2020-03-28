@@ -177,7 +177,7 @@ if ("update" in sys.argv[1]):
 	from os import path
 	while True:
 		usr = input("username:")
-		usrLoc = ["/home/", usr, "/.local/lib/"]
+		usrLoc = ["/home/", usr, "/.local/"]
 		userLocate = ''.join(str(v) for v in usrLoc)
 		if(path.exists(userLocate)):
 			print ("valid username")
