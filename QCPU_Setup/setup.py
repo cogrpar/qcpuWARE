@@ -150,7 +150,7 @@ if ("install" in sys.argv[1]):
 
 
 	#setup DWave connection and ping the machine
-	print ("if you are not sure how to fill out these fields, please refer to https://docs.ocean.dwavesys.com/en/latest/overview/dwavesys.html")
+	print ("if you are not sure how to fill out these fields, please refer to https://docs.ocean.dwavesys.com/en/stable/overview/sapi.html")
 	conec = ["sudo --u ", usr, " dwave config create"]
 	connec = ''.join(str(v) for v in conec)
 	setupConnec = subprocess.Popen([connec], shell=True)
