@@ -87,39 +87,46 @@ public class qcpuWare{
     //this function gets the result from the server, and returns it
     //#############################################################//
 
-    public static double[] SendToQCPU(String data) throws IOException {//function to send information as a string to the server running on the qcpu
+    public static double[] SendToQCPU(String data) {//function to send information as a string to the server running on the qcpu
+        try {
+            //format the data:
+            data = serverPw + data;
+            data = Format(data);
 
-        //format the data:
-        data = serverPw + data;
-        data = Format(data);
+            //this variable is the ip addr of the server:
+            String ip = serverIP;
 
-        //this variable is the ip addr of the server:
-        String ip = serverIP;
+            //clear the results file
+            System.out.println("http://" + ip + "/storage.php?input=" + data);
+            ClrRes();
+            //send string to server
+            String send = new Scanner(new URL("http://" + ip + "/storage.php?input=" + data).openStream(), "UTF-8").useDelimiter("\\A").next();
 
-        //clear the results file
-        System.out.println("http://" + ip + "/storage.php?input=" + data);
-        ClrRes();
-        //send string to server
-        String send = new Scanner(new URL("http://" + ip + "/storage.php?input=" + data).openStream(), "UTF-8").useDelimiter("\\A").next();
+            System.out.println("Printed...\n" + send);
 
-        System.out.println("Printed...\n" + send);
+            //now we get the result from the server
 
-        //now we get the result from the server
+            while (!ReadyToRead(ip)) { //while the result isn't ready
+                try {
+                    Thread.sleep(10); //sleep for 1/100th of a second
+                } catch (Exception e) {
+                }
+            }
 
-        while(!ReadyToRead(ip)){ //while the result isn't ready
-            try{
-                Thread.sleep(10); //sleep for 1/100th of a second
-            }catch (Exception e){}
+            //if we have gotten to this point, we can now read the results
+            String arrayResult = ReadServer(ip);
+
+            double[] output;
+
+            output = StringToArray(arrayResult);
+
+            return output;
+
         }
-
-        //if we have gotten to this point, we can now read the results
-        String arrayResult = ReadServer(ip);
-
-        double[] output;
-
-        output = StringToArray(arrayResult);
-
-        return output;
+        catch (IOException e){ //connection error
+            System.out.println("QCPU-Ware has encountered an exception:\n" + e + "\nError connecting to server, check ip address and password, and that the server is turned on");
+            return null;
+        }
 
     }
 
