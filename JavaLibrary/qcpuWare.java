@@ -1,5 +1,3 @@
-package qcpuWare.jar;
-
 import java.io.IOException;
 import java.net.URL;
 import java.util.Scanner;
@@ -123,7 +121,7 @@ public class qcpuWare{
             return output;
 
         }
-        catch (IOException e){ //connection error
+        catch (Exception e){ //connection error
             System.out.println("QCPU-Ware has encountered an exception:\n" + e + "\nError connecting to server, check ip address and password, and that the server is turned on");
             return null;
         }
