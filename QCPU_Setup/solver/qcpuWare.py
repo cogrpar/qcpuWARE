@@ -86,7 +86,7 @@ def EmptyInput():
 def UpdateLog(status):
   log = open("logs.txt", "a")
   time = datetime.datetime.now()
-  status = time + status + "\n"
+  status = str(time) + status + "\n"
   log.write(status)
   log.close()
 
