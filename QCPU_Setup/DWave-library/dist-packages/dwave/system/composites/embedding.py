@@ -33,6 +33,7 @@ import minorminer
 
 from dwave.embedding import (target_to_source, unembed_sampleset, embed_bqm,
                              chain_to_quadratic)
+from dwave.system.warnings import WarningHandler, WarningAction
 
 __all__ = ('EmbeddingComposite',
            'FixedEmbeddingComposite',
@@ -79,7 +80,10 @@ class EmbeddingComposite(dimod.ComposedSampler):
        >>> sampler = EmbeddingComposite(DWaveSampler())
        >>> h = {'a': -1., 'b': 2}
        >>> J = {('a', 'b'): 1.5}
-       >>> sampleset = sampler.sample_ising(h, J)
+       >>> sampleset = sampler.sample_ising(h, J, num_reads=100)
+       >>> sampleset.first.energy
+       -4.5
+
 
     """
     def __init__(self, child_sampler,
@@ -102,6 +106,8 @@ class EmbeddingComposite(dimod.ComposedSampler):
                           chain_break_method=[],
                           chain_break_fraction=[],
                           embedding_parameters=[],
+                          return_embedding=[],
+                          warnings=[],
                           )
 
         # set the properties
@@ -131,11 +137,21 @@ class EmbeddingComposite(dimod.ComposedSampler):
     Contains the properties of the child sampler.
     """
 
+    return_embedding_default = False
+    """Defines the default behaviour for :meth:`.sample`'s `return_embedding`
+    kwarg.
+    """
+
+    warnings_default = WarningAction.IGNORE
+    """Defines the default behabior for :meth:`.sample`'s `warnings` kwarg.
+    """
+
     def sample(self, bqm, chain_strength=1.0,
                chain_break_method=None,
                chain_break_fraction=True,
                embedding_parameters=None,
-               return_embedding=False,
+               return_embedding=None,
+               warnings=None,
                **parameters):
         """Sample from the provided binary quadratic model.
 
@@ -148,9 +164,13 @@ class EmbeddingComposite(dimod.ComposedSampler):
                 variables to create chains. The energy penalty of chain breaks
                 is 2 * `chain_strength`.
 
-            chain_break_method (function, optional):
-                Method used to resolve chain breaks during sample unembedding.
-                See :func:`~dwave.embedding.unembed_sampleset`.
+            chain_break_method (function/list, optional):
+                Method or methods used to resolve chain breaks. If multiple
+                methods are given, the results are concatenated and a new field
+                called "chain_break_method" specifying the index of the method
+                is appended to the sample set.
+                See :func:`~dwave.embedding.unembed_sampleset` and
+                :mod:`dwave.embedding.chain_breaks`.
 
             chain_break_fraction (bool, optional, default=True):
                 Add a `chain_break_fraction` field to the unembedded response with
@@ -161,9 +181,18 @@ class EmbeddingComposite(dimod.ComposedSampler):
                 keyword arguments. Overrides any `embedding_parameters` passed
                 to the constructor.
 
-            return_embedding (bool, optional, default=False):
-                If True, the embedding is added to :attr:`dimod.SampleSet.info`
-                of the returned sample set.
+            return_embedding (bool, optional):
+                If True, the embedding, chain strength, chain break method and
+                embedding parameters are added to :attr:`dimod.SampleSet.info`
+                of the returned sample set. The default behaviour is defined
+                by :attr:`return_embedding_default`, which itself defaults to
+                False.
+
+            warnings (:class:`~dwave.system.warnings.WarningAction`, optional):
+                Defines what warning action to take, if any. See
+                :mod:`~dwave.system.warnings`. The default behaviour is defined
+                by :attr:`warnings_default`, which itself defaults to
+                :class:`~dwave.system.warnings.IGNORE`
 
             **parameters:
                 Parameters for the sampling method, specified by the child
@@ -176,6 +205,8 @@ class EmbeddingComposite(dimod.ComposedSampler):
             See the example in :class:`EmbeddingComposite`.
 
         """
+        if return_embedding is None:
+            return_embedding = self.return_embedding_default
 
         # solve the problem on the child system
         child = self.child
@@ -200,6 +231,16 @@ class EmbeddingComposite(dimod.ComposedSampler):
 
         embedding = self.find_embedding(source_edgelist, target_edgelist,
                                         **embedding_parameters)
+
+        if warnings is None:
+            warnings = self.warnings_default
+        elif 'warnings' in child.parameters:
+            parameters.update(warnings=warnings)
+
+        warninghandler = WarningHandler(warnings)
+
+        warninghandler.chain_strength(bqm, chain_strength, embedding)
+        warninghandler.chain_length(embedding)
 
         if bqm and not embedding:
             raise ValueError("no embedding found")
@@ -230,10 +271,29 @@ class EmbeddingComposite(dimod.ComposedSampler):
 
         response = child.sample(bqm_embedded, **parameters)
 
-        return unembed_sampleset(response, embedding, source_bqm=bqm,
-                                 chain_break_method=chain_break_method,
-                                 chain_break_fraction=chain_break_fraction,
-                                 return_embedding=return_embedding)
+        warninghandler.chain_break(response, embedding)
+
+        sampleset = unembed_sampleset(response, embedding, source_bqm=bqm,
+                                      chain_break_method=chain_break_method,
+                                      chain_break_fraction=chain_break_fraction,
+                                      return_embedding=return_embedding)
+
+        if return_embedding:
+            sampleset.info['embedding_context'].update(
+                embedding_parameters=embedding_parameters,
+                chain_strength=chain_strength)
+
+        if chain_break_fraction and len(sampleset):
+            warninghandler.issue("All samples have broken chains",
+                                 func=lambda: (sampleset.record.chain_break_fraction.all(), None))
+
+        if warninghandler.action is WarningAction.SAVE:
+            # we're done with the warning handler so we can just pass the list
+            # off, if later we want to pass in a handler or similar we should
+            # do a copy
+            sampleset.info.setdefault('warnings', []).extend(warninghandler.saved)
+
+        return sampleset
 
 
 class LazyFixedEmbeddingComposite(EmbeddingComposite, dimod.Structured):
@@ -445,8 +505,7 @@ class FixedEmbeddingComposite(LazyFixedEmbeddingComposite):
 
     Examples:
 
-        >>> from dwave.system.samplers import DWaveSampler
-        >>> from dwave.system.composites import FixedEmbeddingComposite
+        >>> from dwave.system import DWaveSampler, FixedEmbeddingComposite
         ...
         >>> embedding = {'a': [0, 4], 'b': [1, 5], 'c': [2, 6]}
         >>> sampler = FixedEmbeddingComposite(DWaveSampler(), embedding)
@@ -454,7 +513,10 @@ class FixedEmbeddingComposite(LazyFixedEmbeddingComposite):
         ['a', 'b', 'c']
         >>> sampler.edgelist
         [('a', 'b'), ('a', 'c'), ('b', 'c')]
-        >>> sampleset = sampler.sample_ising({'a': .5, 'c': 0}, {('a', 'c'): -1})
+        >>> sampleset = sampler.sample_ising({'a': .5, 'c': 0}, {('a', 'c'): -1}, num_reads=500)
+        >>> sampleset.first.energy
+        -1.5
+
 
     """
     def __init__(self, child_sampler, embedding=None, source_adjacency=None,

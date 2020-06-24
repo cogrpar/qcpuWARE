@@ -1,0 +1,17 @@
+Metadata-Version: 2.0
+Name: hybrid
+Version: 1.2.3
+Summary: hybrid tools set
+Home-page: http://timd.cn/
+Author: timchow
+Author-email: jordan23nbastar@yeah.net
+License: LGPL
+Keywords: hybrid server
+Platform: UNKNOWN
+Requires-Dist: DBUtils
+Requires-Dist: flask
+Requires-Dist: tornado (>=3.1.1)
+
+UNKNOWN
+
+

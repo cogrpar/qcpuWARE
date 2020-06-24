@@ -16,6 +16,7 @@
 
 from __future__ import division
 
+import collections.abc as abc
 import itertools
 
 import numpy as np
@@ -99,7 +100,11 @@ def embed_bqm(source_bqm, embedding, target_adjacency, chain_strength=1.0,
                          chain_strength=chain_strength, smear_vartype=None).spin
 
     # create a new empty binary quadratic model with the same class as source_bqm
-    target_bqm = source_bqm.empty(source_bqm.vartype)
+    try:
+        target_bqm = source_bqm.base.empty(source_bqm.vartype)
+    except AttributeError:
+        # dimod < 0.9.0
+        target_bqm = source_bqm.empty(source_bqm.vartype)
 
     # add the offset
     target_bqm.add_offset(source_bqm.offset)
@@ -116,7 +121,10 @@ def embed_bqm(source_bqm, embedding, target_adjacency, chain_strength=1.0,
         if any(u not in target_adjacency for u in chain):
             raise InvalidNodeError(v, next(u not in target_adjacency for u in chain))
 
-        b = bias / len(chain)
+        try:
+            b = bias / len(chain)
+        except ZeroDivisionError:
+            raise MissingChainError(v)
 
         target_bqm.add_variables_from({u: b for u in chain})
 
@@ -142,7 +150,16 @@ def embed_bqm(source_bqm, embedding, target_adjacency, chain_strength=1.0,
             continue
 
         quadratic_chain_biases = chain_to_quadratic(chain, target_adjacency, chain_strength)
-        target_bqm.add_interactions_from(quadratic_chain_biases, vartype=dimod.SPIN)  # these are spin
+        # this is in spin, but we need to respect the vartype
+        if target_bqm.vartype is dimod.SPIN:
+            target_bqm.add_interactions_from(quadratic_chain_biases)
+        else:
+            # do the vartype converstion
+            for (u, v), bias in quadratic_chain_biases.items():
+                target_bqm.add_interaction(u, v, 4*bias)
+                target_bqm.add_variable(u, -2*bias)
+                target_bqm.add_variable(v, -2*bias)
+                target_bqm.add_offset(bias)
 
         # add the energy for satisfied chains to the offset
         energy_diff = -sum(itervalues(quadratic_chain_biases))
@@ -290,8 +307,12 @@ def unembed_sampleset(target_sampleset, embedding, source_bqm,
         source_bqm (:obj:`dimod.BinaryQuadraticModel`):
             Source BQM.
 
-        chain_break_method (function, optional):
-            Method used to resolve chain breaks.
+        chain_break_method (function/list, optional):
+            Method or methods used to resolve chain breaks. If multiple methods
+            are given, the results are concatenated and a new field called
+            "chain_break_method" specifying the index of the method is appended
+            to the sample set.
+            Defaults to :func:`~dwave.embedding.chain_breaks.majority_vote`.
             See :mod:`dwave.embedding.chain_breaks`.
 
         chain_break_fraction (bool, optional, default=False):
@@ -329,8 +350,31 @@ def unembed_sampleset(target_sampleset, embedding, source_bqm,
 
     if chain_break_method is None:
         chain_break_method = majority_vote
+    elif isinstance(chain_break_method, abc.Sequence):
+        # we want to apply multiple CBM and then combine
+        samplesets = [unembed_sampleset(target_sampleset, embedding,
+                                        source_bqm, chain_break_method=cbm,
+                                        chain_break_fraction=chain_break_fraction)
+                      for cbm in chain_break_method]
+        sampleset = dimod.sampleset.concatenate(samplesets)
 
-    variables = list(source_bqm)  # need this ordered
+        # Add a new data field tracking which came from
+        # todo: add this functionality to dimod
+        cbm_idxs = np.empty(len(sampleset), dtype=np.int)
+
+        start = 0
+        for i, ss in enumerate(samplesets):
+            cbm_idxs[start:start+len(ss)] = i
+            start += len(ss)
+
+        new = np.lib.recfunctions.append_fields(sampleset.record,
+                                                'chain_break_method', cbm_idxs,
+                                                asrecarray=True, usemask=False)
+
+        return type(sampleset)(new, sampleset.variables, sampleset.info,
+                               sampleset.vartype)
+
+    variables = list(source_bqm.variables)  # need this ordered
     try:
         chains = [embedding[v] for v in variables]
     except KeyError:
@@ -350,7 +394,9 @@ def unembed_sampleset(target_sampleset, embedding, source_bqm,
     info = target_sampleset.info.copy()
 
     if return_embedding:
-        info.update(embedding=embedding)
+        embedding_context = dict(embedding=embedding,
+                                 chain_break_method=chain_break_method.__name__)
+        info.update(embedding_context=embedding_context)
 
     return dimod.SampleSet.from_samples_bqm((unembedded, variables),
                                             source_bqm,

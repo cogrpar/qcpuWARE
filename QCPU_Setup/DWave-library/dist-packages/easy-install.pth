@@ -1,5 +1,4 @@
 ./dwave_tabu-0.2.1-py3.7-linux-armv7l.egg
-./dwave_ocean_sdk-1.5.0-py3.7.egg
 ./penaltymodel_maxgap-0.5.1-py3.7.egg
 ./pyqubo-0.4.0-py3.7.egg
 ./PySMT-0.7.0-py3.7.egg

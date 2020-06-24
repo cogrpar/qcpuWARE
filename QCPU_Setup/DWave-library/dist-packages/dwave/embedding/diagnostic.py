@@ -47,7 +47,7 @@ def diagnose_embedding(emb, source, target):
             :exc:`.MissingChainError`, snode: a source node label that does not
             occur as a key of `emb`, or for which emb[snode] is empty.
 
-            :exc:`.ChainOverlapError`, tnode, snode0, snode0: a target node which
+            :exc:`.ChainOverlapError`, tnode, snode0, snode1: a target node which
             occurs in both `emb[snode0]` and `emb[snode1]`.
 
             :exc:`.DisconnectedChainError`, snode: a source node label whose chain
@@ -64,15 +64,17 @@ def diagnose_embedding(emb, source, target):
         to a square target graph. A valid embedding, such as
         `emb = {0: [1], 1: [0], 2: [2, 3]}`, yields no errors.
 
+         >>> from dwave.embedding import diagnose_embedding
          >>> import networkx as nx
          >>> source = nx.complete_graph(3)
          >>> target = nx.cycle_graph(4)
          >>> embedding = {0: [2], 1: [1, 'a'], 2: [2, 3]}
          >>> diagnosis = diagnose_embedding(embedding, source, target)
-         >>> for problem in diagnosis:
+         >>> for problem in diagnosis:  # doctest: +SKIP
          ...     print(problem)
          (<class 'dwave.embedding.exceptions.InvalidNodeError'>, 1, 'a')
          (<class 'dwave.embedding.exceptions.ChainOverlapError'>, 2, 2, 0)
+
     """
 
     if not hasattr(source, 'edges'):
@@ -80,8 +82,9 @@ def diagnose_embedding(emb, source, target):
     if not hasattr(target, 'edges'):
         target = nx.Graph(target)
 
-    label = {}
+    labels = {}
     embedded = set()
+    overlaps = set()
     for x in source:
         try:
             embx = emb[x]
@@ -91,23 +94,31 @@ def diagnose_embedding(emb, source, target):
         if missing_chain:
             yield MissingChainError, x
             continue
+
         all_present = True
         for q in embx:
-            if label.get(q, x) != x:
-                yield ChainOverlapError, q, x, label[q]
-            elif q not in target:
+            if q not in target:
                 all_present = False
                 yield InvalidNodeError, x, q
-            else:
-                label[q] = x
+            elif x not in labels.setdefault(q, {x}):
+                labels[q].add(x)
+                overlaps.add(q)
+
         if all_present:
             embedded.add(x)
             if not nx.is_connected(target.subgraph(embx)):
                 yield DisconnectedChainError, x
 
+    for q in overlaps:
+        nodes = list(labels[q])
+        root = nodes[0]
+        for x in nodes[1:]:
+            yield ChainOverlapError, q, root, x
+
     yielded = nx.Graph()
-    for p, q in target.subgraph(label).edges():
-        yielded.add_edge(label[p], label[q])
+    for p, q in target.subgraph(labels).edges():
+        yielded.add_edges_from((x, y) for x in labels[p] for y in labels[q])
+
     for x, y in source.edges():
         if x == y:
             continue

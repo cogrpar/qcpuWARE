@@ -1,0 +1,14 @@
+message m1{
+    required int32 int1 = 1;
+    repeated int32 arr1 = 2;
+    repeated m2    arr2 = 3;
+}
+
+message m2{
+    required int32 int2 = 1;
+    repeated m3    arr3 = 2;
+}
+
+message m3{
+    required int32 int3 = 1;
+}

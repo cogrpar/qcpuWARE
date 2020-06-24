@@ -97,7 +97,7 @@ def chimera_layout(G, scale=1., center=None, dim=2):
             pos = {v: xy_coords(*dat['chimera_index']) for v, dat in G.nodes(data=True)}
         else:
             coord = chimera_coordinates(m, n, t)
-            pos = {v: xy_coords(*coord.tuple(v)) for v in G.nodes()}
+            pos = {v: xy_coords(*coord.linear_to_chimera(v)) for v in G.nodes()}
     else:
         # best case scenario, each node in G has a chimera_index attribute. Otherwise
         # we will try to determine it using the find_chimera_indices function.
@@ -282,6 +282,11 @@ def draw_chimera_embedding(G, *args, **kwargs):
         The color to use for nodes and edges of G which are not involved
         in chains, and edges which are neither chain edges nor interactions.
         If unused_color is None, these nodes and edges will not be shown at all.
+
+    overlapped_embedding: boolean (optional, default False)
+        If overlapped_embedding is True, then chains in emb may overlap (contain
+        the same vertices in G), and the drawing will display these overlaps as
+        concentric circles.
 
     kwargs : optional keywords
        See networkx.draw_networkx() for a description of optional keywords,

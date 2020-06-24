@@ -15,7 +15,22 @@
 # =============================================================================
 __all__ = ['__version__', '__author__', '__authoremail__', '__description__']
 
-__version__ = '0.8.0'
+__version__ = '0.9.6'
 __author__ = 'D-Wave Systems Inc.'
 __authoremail__ = 'acondello@dwavesys.com'
 __description__ = 'All things D-Wave System.'
+
+
+# register the non-open-source packages required for dwave-drivers to work
+contrib = [{
+    'name': 'drivers',
+    'title': 'D-Wave Drivers',
+    'description': 'These drivers enable some automated performance-tuning features.',
+    'license': {
+        'name': 'D-Wave EULA',
+        'url': 'https://docs.ocean.dwavesys.com/eula',
+    },
+    'requirements': [
+        'dwave-drivers>=0.4.4',
+    ]
+}]

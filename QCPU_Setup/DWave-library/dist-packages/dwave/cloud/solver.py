@@ -35,12 +35,16 @@ import logging
 import warnings
 from collections import Mapping
 
+import six
+
 from dwave.cloud.exceptions import *
 from dwave.cloud.coders import (
     encode_problem_as_qp, encode_problem_as_bq,
     decode_qp_numpy, decode_qp, decode_bq)
 from dwave.cloud.utils import uniform_iterator, reformat_qubo_as_ising
 from dwave.cloud.computation import Future
+from dwave.cloud.concurrency import Present
+from dwave.cloud.events import dispatch_event
 
 # Use numpy if available for fast encoding/decoding
 try:
@@ -204,14 +208,12 @@ class BaseSolver(object):
     @property
     def qpu(self):
         "Is this a QPU-based solver?"
-        # TODO: add a field for this in SAPI response; for now base decision on id/name
-        return not self.id.startswith('c4-sw_')
+        return self.properties.get('category', '').lower() == 'qpu'
 
     @property
     def software(self):
         "Is this a software-based solver?"
-        # TODO: add a field for this in SAPI response; for now base decision on id/name
-        return self.id.startswith('c4-sw_')
+        return self.properties.get('category', '').lower() == 'software'
 
     @property
     def is_qpu(self):
@@ -243,6 +245,8 @@ class UnstructuredSolver(BaseSolver):
         data (`dict`):
             Data from the server describing this solver.
 
+    Note:
+        Events are not yet dispatched from unstructured solvers.
     """
 
     _handled_problem_types = {"bqm"}
@@ -299,6 +303,40 @@ class UnstructuredSolver(BaseSolver):
         bqm = dimod.BinaryQuadraticModel.from_qubo(qubo)
         return self.sample_bqm(bqm, **params)
 
+    def _encode_any_problem_as_bqm_ref(self, problem, params):
+        """Encode `problem` for submitting in `bqm-ref` format. Upload the
+        problem if it's not already uploaded.
+
+        Args:
+            problem (:class:`~dimod.BinaryQuadraticModel`/str):
+                A binary quadratic model, or a reference to one (Problem ID).
+
+            params (dict):
+                Parameters for the sampling method, solver-specific.
+
+        Returns:
+            str:
+                JSON-encoded problem submit body
+
+        """
+
+        if isinstance(problem, six.string_types):
+            problem_id = problem
+        else:
+            logger.debug("To encode the problem for submit via 'bqm-ref', "
+                         "we need to upload it first.")
+            problem_id = self.upload_bqm(problem).result()
+
+        body = json.dumps({
+            'solver': self.id,
+            'data': encode_problem_as_bq(problem_id),
+            'type': 'bqm',
+            'params': params
+        })
+        logger.trace("Sampling request encoded as: %s", body)
+
+        return body
+
     def sample_bqm(self, bqm, **params):
         """Sample from the specified :term:`BQM`.
 
@@ -316,21 +354,44 @@ class UnstructuredSolver(BaseSolver):
         Note:
             To use this method, dimod package has to be installed.
         """
-        # encode the request
-        body = json.dumps({
-            'solver': self.id,
-            'data': encode_problem_as_bq(bqm),
-            'type': 'bqm',
-            'params': params
-        })
-        logger.trace("Encoded sample request: %s", body)
 
-        future = Future(solver=self, id_=None, return_matrix=self.return_matrix)
+        # encode the request (body as future)
+        body = self.client._encode_problem_executor.submit(
+            self._encode_any_problem_as_bqm_ref,
+            problem=bqm, params=params)
+
+        # computation future holds a reference to the remote job
+        computation = Future(solver=self, id_=None, return_matrix=self.return_matrix)
 
         logger.debug("Submitting new problem to: %s", self.id)
-        self.client._submit(body, future)
+        self.client._submit(body, computation)
 
-        return future
+        return computation
+
+    @staticmethod
+    def _bqm_as_fileview(bqm):
+        # New preferred BQM binary serialization.
+        # XXX: temporary until something like dwavesystems/dimod#599 is implemented.
+
+        try:
+            from dimod.serialization.fileview import FileView as BQMFileView
+            from dimod import AdjVectorBQM
+        except ImportError: # pragma: no cover
+            return
+
+        if isinstance(bqm, BQMFileView):
+            return bqm
+
+        try:
+            if not isinstance(bqm, AdjVectorBQM):
+                bqm = AdjVectorBQM(bqm)
+        except:
+            return
+
+        try:
+            return BQMFileView(bqm)
+        except:
+            return
 
     def upload_bqm(self, bqm):
         """Upload the specified :term:`BQM` to SAPI, returning a Problem ID
@@ -352,11 +413,15 @@ class UnstructuredSolver(BaseSolver):
         Note:
             To use this method, dimod package has to be installed.
         """
-        if hasattr(bqm, 'to_serializable'):
-            data = encode_problem_as_bq(bqm, compress=True)['data']
-        else:
-            # raw data (ready for upload) in `bqm`
-            data = bqm
+
+        data = self._bqm_as_fileview(bqm)
+        if data is None:
+            if hasattr(bqm, 'to_serializable'):
+                # soon to be deprecated
+                data = encode_problem_as_bq(bqm, compress=True)['data']
+            else:
+                # raw data (ready for upload) in `bqm`
+                data = bqm
 
         return self.client.upload_problem_encoded(data)
 
@@ -591,11 +656,17 @@ class StructuredSolver(BaseSolver):
             raise RuntimeError("Can't sample from 'bqm' without dimod. "
                                "Re-install the library with 'bqm' support.")
 
-        ising = bqm.spin
-        return self.sample_ising(ising.linear, ising.quadratic, **params)
+        if bqm.vartype is dimod.SPIN:
+            return self._sample('ising', bqm.linear, bqm.quadratic, params,
+                                undirected_biases=True)
+        elif bqm.vartype is dimod.BINARY:
+            return self._sample('qubo', bqm.linear, bqm.quadratic, params,
+                                undirected_biases=True)
+        else:
+            raise TypeError("unknown/unsupported vartype")
 
-    def _sample(self, type_, linear, quadratic, params):
-        """Internal method for `sample_ising` and `sample_qubo`.
+    def _sample(self, type_, linear, quadratic, params, undirected_biases=False):
+        """Internal method for `sample_ising`, `sample_qubo` and `sample_bqm`.
 
         Args:
             linear (list/dict):
@@ -604,12 +675,21 @@ class StructuredSolver(BaseSolver):
             quadratic (dict[(int, int), float]):
                 Quadratic terms of the model.
 
-            **params:
+            params (dict):
                 Parameters for the sampling method, solver-specific.
+
+            undirected_biases (boolean, default=False):
+                Are (quadratic) biases specified on undirected edges? For
+                triangular or symmetric matrix of quadratic biases set it to
+                ``True``.
 
         Returns:
             :class:`Future`
         """
+
+        args = dict(type_=type_, linear=linear, quadratic=quadratic, params=params)
+        dispatch_event('before_sample', obj=self, args=args)
+
         # Check the problem
         if not self.check_problem(linear, quadratic):
             raise InvalidProblemError("Problem graph incompatible with solver.")
@@ -626,19 +706,24 @@ class StructuredSolver(BaseSolver):
         # transform some of the parameters in-place
         self._format_params(type_, combined_params)
 
-        body = json.dumps({
+        body_data = json.dumps({
             'solver': self.id,
-            'data': encode_problem_as_qp(self, linear, quadratic),
+            'data': encode_problem_as_qp(self, linear, quadratic,
+                                         undirected_biases=undirected_biases),
             'type': type_,
             'params': combined_params
         })
-        logger.trace("Encoded sample request: %s", body)
+        logger.trace("Encoded sample request: %s", body_data)
 
-        future = Future(solver=self, id_=None, return_matrix=self.return_matrix)
+        body = Present(result=body_data)
+        computation = Future(solver=self, id_=None, return_matrix=self.return_matrix)
 
         logger.debug("Submitting new problem to: %s", self.id)
-        self.client._submit(body, future)
-        return future
+        self.client._submit(body, computation)
+
+        dispatch_event('after_sample', obj=self, args=args, return_value=computation)
+
+        return computation
 
     def _format_params(self, type_, params):
         """Reformat some of the parameters for sapi."""

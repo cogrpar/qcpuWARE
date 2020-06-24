@@ -68,10 +68,12 @@ import six
 
 from dwave.cloud.package_info import __packagename__, __version__
 from dwave.cloud.exceptions import *
+from dwave.cloud.computation import Future
 from dwave.cloud.config import load_config, legacy_load_config, parse_float
 from dwave.cloud.solver import Solver, available_solvers
 from dwave.cloud.concurrency import PriorityThreadPoolExecutor
 from dwave.cloud.upload import ChunkedData
+from dwave.cloud.events import dispatch_event
 from dwave.cloud.utils import (
     TimeoutingHTTPAdapter, BaseUrlSession, user_agent,
     datetime_to_timestamp, utcnow, epochnow, cached, retried)
@@ -131,9 +133,9 @@ class Client(object):
         a value for `token`.
 
         >>> from dwave.cloud import Client
-        >>> client = Client(token='secret')
+        >>> client = Client(token='secret')     # doctest: +SKIP
         >>> # code that uses client
-        >>> client.close()
+        >>> client.close()       # doctest: +SKIP
 
 
     """
@@ -160,6 +162,7 @@ class Client(object):
     _SUBMISSION_THREAD_COUNT = 5
     _UPLOAD_PROBLEM_THREAD_COUNT = 1
     _UPLOAD_PART_THREAD_COUNT = 10
+    _ENCODE_PROBLEM_THREAD_COUNT = _UPLOAD_PROBLEM_THREAD_COUNT
     _CANCEL_THREAD_COUNT = 1
     _POLL_THREAD_COUNT = 2
     _LOAD_THREAD_COUNT = 5
@@ -308,7 +311,7 @@ class Client(object):
             >>> from dwave.cloud import Client
             >>> client = Client.from_config(config_file='~/jane/my_path_to_config/my_cloud_conf.conf')  # doctest: +SKIP
             >>> # code that uses client
-            >>> client.close()
+            >>> client.close()     # doctest: +SKIP
 
         """
 
@@ -322,8 +325,10 @@ class Client(object):
 
         # fallback to legacy `.dwrc` if key variables missing
         if legacy_config_fallback:
-            warnings.warn("'legacy_config_fallback' is deprecated, please convert "
-                          "your legacy .dwrc file to the new config format.", DeprecationWarning)
+            warnings.warn(
+                "'legacy_config_fallback' is deprecated, and it will be removed "
+                "in 0.7.0. please convert your legacy .dwrc file to the new "
+                "config format.", DeprecationWarning)
 
             if not config.get('token'):
                 config = legacy_load_config(
@@ -357,6 +362,14 @@ class Client(object):
         are performed by asynchronously workers. For 2, 3, and 5 the workers
         gather tasks in batches.
         """
+
+        args = dict(
+            endpoint=endpoint, token=token, solver=solver, proxy=proxy,
+            permissive_ssl=permissive_ssl, request_timeout=request_timeout,
+            polling_timeout=polling_timeout, connection_close=connection_close,
+            headers=headers, kwargs=kwargs)
+        dispatch_event('before_client_init', obj=self, args=args)
+
         if not endpoint:
             endpoint = self.DEFAULT_API_ENDPOINT
 
@@ -470,6 +483,12 @@ class Client(object):
         self._upload_part_executor = \
             PriorityThreadPoolExecutor(self._UPLOAD_PART_THREAD_COUNT)
 
+        self._encode_problem_executor = \
+            ThreadPoolExecutor(self._ENCODE_PROBLEM_THREAD_COUNT)
+
+        dispatch_event(
+            'after_client_init', obj=self, args=args, return_value=None)
+
     def create_session(self):
         """Create a new requests session based on client's (self) params.
 
@@ -516,9 +535,9 @@ class Client(object):
             some code (represented by a placeholder comment), and then closes the client.
 
             >>> from dwave.cloud import Client
-            >>> client = Client.from_config()
+            >>> client = Client.from_config()    # doctest: +SKIP
             >>> # code that uses client
-            >>> client.close()
+            >>> client.close()    # doctest: +SKIP
 
         """
         # Finish all the work that requires the connection
@@ -535,6 +554,8 @@ class Client(object):
         self._upload_problem_executor.shutdown()
         logger.debug("Shutting down problem part upload executor")
         self._upload_part_executor.shutdown()
+        logger.debug("Shutting down problem encoder executor")
+        self._encode_problem_executor.shutdown()
 
         # Send kill-task to all worker threads
         # Note: threads can't be 'killed' in Python, they have to die by
@@ -633,6 +654,21 @@ class Client(object):
             # propagate all other/decoding errors, like InvalidAPIResponseError, etc.
 
         return solvers
+
+    def retrieve_answer(self, id_):
+        """Retrieve a problem by id.
+
+        Args:
+            id_ (str):
+                As returned by :attr:`Future.id`.
+
+        Returns:
+            :class:`Future`
+
+        """
+        future = Future(None, id_)
+        self._load(future)
+        return future
 
     def get_solvers(self, refresh=False, order_by='avg_load', **filters):
         """Return a filtered list of solvers handled by this client.
@@ -763,8 +799,8 @@ class Client(object):
         Derived properies are:
 
         * `name` (str): Solver name/id.
-        * `qpu` (bool): Is solver QPU based?
-        * `software` (bool): Is solver software based?
+        * `qpu` (bool): Solver is a QPU?
+        * `software` (bool): Solver is a software solver?
         * `online` (bool, default=True): Is solver online?
         * `num_active_qubits` (int): Number of active qubits. Less then or equal to `num_qubits`.
         * `avg_load` (float): Solver's average load (similar to Unix load average).
@@ -817,6 +853,9 @@ class Client(object):
                 topology__type__eq="chimera"        # topology.type must be chimera
             )
         """
+
+        args = dict(refresh=refresh, order_by=order_by, filters=filters)
+        dispatch_event('before_get_solvers', obj=self, args=args)
 
         def covers_op(prop, val):
             """Does LHS `prop` (range) fully cover RHS `val` (range or item)?"""
@@ -966,6 +1005,9 @@ class Client(object):
         if sort_reverse:
             solvers.reverse()
 
+        dispatch_event(
+            'after_get_solvers', obj=self, args=args, return_value=solvers)
+
         return solvers
 
     def solvers(self, refresh=False, **filters):
@@ -1008,7 +1050,7 @@ class Client(object):
             uses the default solver, the second explicitly selects another solver.
 
             >>> from dwave.cloud import Client
-            >>> client = Client.from_config()
+            >>> client = Client.from_config()    # doctest: +SKIP
             >>> client.get_solvers()   # doctest: +SKIP
             [Solver(id='2000Q_ONLINE_SOLVER1'), Solver(id='2000Q_ONLINE_SOLVER2')]
             >>> solver1 = client.get_solver()    # doctest: +SKIP
@@ -1052,6 +1094,38 @@ class Client(object):
         Note:
             This method is always run inside of a daemon thread.
         """
+
+        def task_done():
+            self._submission_queue.task_done()
+
+        def filter_ready(item):
+            """Pass-through ready (encoded) problems, re-enqueue ones for which
+            the encoding is in progress, and fail the ones for which encoding
+            failed.
+            """
+
+            # body is a `concurrent.futures.Future`, so make sure
+            # it's ready for submitting
+            if item.body.done():
+                exc = item.body.exception()
+                if exc:
+                    # encoding failed, submit should fail as well
+                    logger.info("Problem encoding prior to submit "
+                                "failed with: %r", exc)
+                    item.future._set_error(exc)
+                    task_done()
+
+                else:
+                    # problem ready for submit
+                    return [item]
+
+            else:
+                # body not ready, return the item to queue
+                self._submission_queue.put(item)
+                task_done()
+
+            return []
+
         session = self.create_session()
         try:
             while True:
@@ -1063,19 +1137,25 @@ class Client(object):
                 item = self._submission_queue.get()
 
                 if item is None:
+                    task_done()
                     break
 
-                ready_problems = [item]
+                ready_problems = filter_ready(item)
                 while len(ready_problems) < self._SUBMIT_BATCH_SIZE:
                     try:
-                        ready_problems.append(self._submission_queue.get_nowait())
+                        item = self._submission_queue.get_nowait()
                     except queue.Empty:
                         break
 
+                    ready_problems.extend(filter_ready(item))
+
+                if not ready_problems:
+                    continue
+
                 # Submit the problems
                 logger.debug("Submitting %d problems", len(ready_problems))
-                body = '[' + ','.join(mess.body for mess in ready_problems) + ']'
                 try:
+                    body = '[' + ','.join(mess.body.result() for mess in ready_problems) + ']'
                     try:
                         response = session.post('problems/', body)
                         localtime_of_response = epochnow()
@@ -1095,14 +1175,14 @@ class Client(object):
 
                     for mess in ready_problems:
                         mess.future._set_error(exception, sys.exc_info())
-                        self._submission_queue.task_done()
+                        task_done()
                     continue
 
                 # Pass on the information
                 for submission, res in zip(ready_problems, message):
                     submission.future._set_clock_diff(response, localtime_of_response)
                     self._handle_problem_status(res, submission.future)
-                    self._submission_queue.task_done()
+                    task_done()
 
                 # this is equivalent to a yield to scheduler in other threading libraries
                 time.sleep(0)
@@ -1177,6 +1257,14 @@ class Client(object):
 
                 # If the message is complete, forward it to the future object
                 if 'answer' in message:
+
+                    # If the future does not know which solver it's associated
+                    # with, we get it from the info provided from the server.
+                    # An alternative to making this call here would be to pass
+                    # self in with the message
+                    if future.solver is None:
+                        future.solver = self.get_solver(name=message['solver'])
+
                     future._set_message(message)
                 # If the problem is complete, but we don't have the result data
                 # put the problem in the queue for loading results.

@@ -72,26 +72,7 @@ if ("install" in sys.argv[1]):
 			print("err; pease enter either n or y\n")
 		
 	if (platform == "y"):
-		#clone ocean-sdk repo and build on this device
-		clone = subprocess.Popen(["git clone https://github.com/dwavesystems/dwave-ocean-sdk.git"], shell=True)
-		clone.wait()
-		#edit the setup.py code to remove packages incompatible with the pi
-		setup = open("dwave-ocean-sdk/setup.py", "r+")
-		packages = setup.read()
-		pos = packages.find("'dwave-tabu==")
-		sub = "'dwave-tabu==" + packages[pos+13] + packages[pos+14] + packages[pos+15] + packages[pos+16] + packages[pos+17] + packages[pos+18] + packages[pos+19]
-		packages = packages.replace(sub, "")  
-		setup.close()
-		setupWrite = open("dwave-ocean-sdk/setup.py", "w")
-		setupWrite.write(packages)
-		setupWrite.close()
-		
-		#build sdk
-		build = subprocess.Popen(["cd dwave-ocean-sdk && python3 setup.py install"], shell=True)
-		build.wait()
-		cdBack = subprocess.Popen(["cd .."], shell=True)
-		cdBack
-		#now copy the dwave python librarys to the correct locations
+		#copy the dwave python librarys to the correct locations
 		for filename in os.listdir("DWave-library/site-packages"):
 			pyVer = sys.version
 			pyVerSplit = pyVer.split(" ")
@@ -119,12 +100,13 @@ if ("install" in sys.argv[1]):
 			mvDist = subprocess.Popen(["mv", dir1, dir2])
 			mvDist.wait()
 			print ("moved ", dir1, " to new location: ", dir2)
-		#import cloud client
-		cloud = subprocess.Popen(["pip3 install dwave-cloud-client"], shell=True)
-		cloud.wait()
-		#import sympy
+		#install sympy
 		sym = subprocess.Popen(["pip3 install sympy"], shell=True)
-		sym.wait() 
+		sym.wait()
+		#install dwave-ocean-sdk without dependancies to add the "dwave" command
+		dcmd = subprocess.Popen(["pip3 install dwave-ocean-sdk --no-dependencies"], shell=True)
+                dcmd.wait() 
+ 
 	    
 	if (platform == "n"): #if other platform, just use pip
 		pip_method = subprocess.Popen(["pip3 install dwave-ocean-sdk"], shell=True)

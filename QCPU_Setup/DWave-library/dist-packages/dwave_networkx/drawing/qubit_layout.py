@@ -19,6 +19,8 @@ Tools to visualize Chimera lattices and weighted graph problems on them.
 
 from __future__ import division
 
+import math
+import random
 import networkx as nx
 from networkx import draw
 
@@ -69,6 +71,11 @@ def draw_qubit_graph(G, layout, linear_biases={}, quadratic_biases={},
         form {edge: bias, ...}. Each bias should be numeric. Self-loop
         edges (i.e., :math:`i=j`) are treated as linear biases.
 
+    midpoint : float (optional, default None)
+        A float that specifies where the center of the colormap should
+        be. If not provided, the colormap will default to the middle of
+        min/max values provided.
+
     kwargs : optional keywords
        See networkx.draw_networkx() for a description of optional keywords,
        with the exception of the `pos` parameter which is not used by this
@@ -89,8 +96,22 @@ def draw_qubit_graph(G, layout, linear_biases={}, quadratic_biases={},
     else:
         _mpl_toolkit_found = True
 
+    fig = plt.gcf()
+    ax = kwargs.pop('ax', None)
+    cax = kwargs.pop('cax', None)
+
     if linear_biases or quadratic_biases:
         # if linear biases and/or quadratic biases are provided, then color accordingly.
+
+        if ax is None:
+            ax = fig.add_axes([0.01, 0.01, 0.86, 0.98])
+
+        if cax is None:
+            if _mpl_toolkit_found:
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes('right', size='2%', pad=0.05)
+            else:
+                cax = fig.add_axes([.87, 0.2, 0.02, 0.6])  # left, bottom, width, height
 
         if nodelist is None:
             nodelist = G.nodes()
@@ -124,33 +145,50 @@ def draw_qubit_graph(G, layout, linear_biases={}, quadratic_biases={},
         node_color = [node_color(v) for v in nodelist]
         edge_color = [edge_color(u, v) for u, v in edgelist]
 
-        kwargs['edge_color'] = edge_color
-        kwargs['node_color'] = node_color
-
         # the range of the color map is shared for nodes/edges and is symmetric
         # around 0.
         vmag = max(max(abs(c) for c in node_color), max(abs(c) for c in edge_color))
         if vmin is None:
             vmin = -1 * vmag
+
         if vmax is None:
             vmax = vmag
+
         if edge_vmin is None:
             edge_vmin = -1 * vmag
+
         if edge_vmax is None:
             edge_vmax = vmag
 
-    fig = plt.gcf()
-    ax = kwargs.pop('ax', plt.gca())
-    cax = kwargs.pop('cax',None)
-    if linear_biases or quadratic_biases:
-        if ax is None:
-            ax = fig.add_axes([0.01, 0.01, 0.86, 0.98])
-        if cax is None:
-            if _mpl_toolkit_found:
-                divider = make_axes_locatable(ax)
-                cax = divider.append_axes('right', size='2%', pad=0.05)
-            else:
-                cax = fig.add_axes([.87, 0.2, 0.02, 0.6])  # left, bottom, width, height
+        if linear_biases and quadratic_biases:
+            global_vmin = min(edge_vmin, vmin)
+            global_vmax = max(edge_vmax, vmax)
+
+            if midpoint is None:
+                midpoint = (global_vmax + global_vmin) / 2.0
+            norm_map = mpl.colors.DivergingNorm(midpoint, vmin=global_vmin, vmax=global_vmax)
+
+            node_color = [cmap(norm_map(node)) for node in node_color]
+            edge_color = [cmap(norm_map(edge)) for edge in edge_color]
+            mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm_map, orientation='vertical')
+
+        # if the biases are provided, then add a legend explaining the color map
+        elif linear_biases:
+            if midpoint is None:
+                midpoint = (vmax + vmin) / 2.0
+            norm_map = mpl.colors.DivergingNorm(midpoint, vmin=vmin, vmax=vmax)
+            node_color = [cmap(norm_map(node)) for node in node_color]
+            mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm_map, orientation='vertical')
+
+        elif quadratic_biases:
+            if midpoint is None:
+                midpoint = (edge_vmax + edge_vmin) / 2.0
+            norm_map = mpl.colors.DivergingNorm(midpoint, vmin=edge_vmin, vmax=edge_vmax)
+            edge_color = [edge_cmap(norm_map(edge)) for edge in edge_color]
+            mpl.colorbar.ColorbarBase(cax, cmap=edge_cmap, norm=norm_map, orientation='vertical')
+
+        kwargs['edge_color'] = edge_color
+        kwargs['node_color'] = node_color
 
     else:
         if ax is None:
@@ -161,25 +199,10 @@ def draw_qubit_graph(G, layout, linear_biases={}, quadratic_biases={},
          edge_vmax=edge_vmax,
          **kwargs)
 
-    # if the biases are provided, then add a legend explaining the color map
-    if linear_biases:
-        if midpoint is None:
-            midpoint = (vmax+vmin)/2.0
-        mpl.colorbar.ColorbarBase(cax, cmap=cmap,
-                                 norm = mpl.colors.DivergingNorm(midpoint,vmin=vmin,vmax=vmax),
-                                  orientation='vertical')
-
-    if quadratic_biases:
-        if midpoint is None:
-            midpoint = (edge_vmax+edge_vmin)/2.0
-        mpl.colorbar.ColorbarBase(cax, cmap=edge_cmap,
-                                 norm = mpl.colors.DivergingNorm(midpoint,vmin=edge_vmin,vmax=edge_vmax),
-                                  orientation='vertical')
-
 
 def draw_embedding(G, layout, emb, embedded_graph=None, interaction_edges=None,
                    chain_color=None, unused_color=(0.9,0.9,0.9,1.0), cmap=None,
-                   show_labels=False, **kwargs):
+                   show_labels=False, overlapped_embedding=False, **kwargs):
     """Draws an embedding onto the graph G, according to layout.
 
     If interaction_edges is not None, then only display the couplers in that
@@ -224,6 +247,11 @@ def draw_embedding(G, layout, emb, embedded_graph=None, interaction_edges=None,
         in chains, and edges which are neither chain edges nor interactions.
         If unused_color is None, these nodes and edges will not be shown at all.
 
+    overlapped_embedding: boolean (optional, default False)
+        If overlapped_embedding is True, then chains in emb may overlap (contain
+        the same vertices in G), and the drawing will display these overlaps as
+        concentric circles.
+
     kwargs : optional keywords
        See networkx.draw_networkx() for a description of optional keywords,
        with the exception of the `pos` parameter which is not used by this
@@ -238,8 +266,8 @@ def draw_embedding(G, layout, emb, embedded_graph=None, interaction_edges=None,
 
     if nx.utils.is_string_like(unused_color):
         from matplotlib.colors import colorConverter
-        alpha = kwargs.get('alpha',1.0)
-        unused_color = colorConverter.to_rgba(unused_color,alpha)
+        alpha = kwargs.get('alpha', 1.0)
+        unused_color = colorConverter.to_rgba(unused_color, alpha)
 
     if chain_color is None:
         import matplotlib.cm
@@ -250,6 +278,22 @@ def draw_embedding(G, layout, emb, embedded_graph=None, interaction_edges=None,
             color = distinguishable_color_map(int(n+1))
         var_i = {v: i for i, v in enumerate(emb)}
         chain_color = {v: color(i/n) for i, v in enumerate(emb)}
+
+    if overlapped_embedding:
+        bags = compute_bags(G, emb)
+        base_node_size = kwargs.get('node_size', 100)
+        node_size_dict = {v: base_node_size for v in G.nodes()}
+        G, emb, interaction_edges = unoverlapped_embedding(G, emb, interaction_edges)
+        for node, data in G.nodes(data=True):
+            if 'dummy' in data:
+                v, x = node
+                layout[node] = layout[v]
+
+        for v, bag in bags.items():
+            for i, x in enumerate(bag):
+                node_size_dict[(v, x)] = base_node_size * (len(bag) - i) ** 2
+
+        kwargs['node_size'] = [node_size_dict[p] for p in G.nodes()]
 
     qlabel = {q: v for v, chain in iteritems(emb) for q in chain}
     edgelist = []
@@ -301,9 +345,43 @@ def draw_embedding(G, layout, emb, embedded_graph=None, interaction_edges=None,
 
     labels = {}
     if show_labels:
-        for v in emb.keys():
-            c = emb[v]
-            labels[list(c)[0]] = str(v)
+        if overlapped_embedding:
+            node_labels = {q: [] for q in bags.keys()}
+            node_index = {p: i for i, p in enumerate(G.nodes())}
+            for v in emb.keys():
+                v_labelled = False
+                chain = emb[v]
+                for node in chain:
+                    (q, _) = node
+                    if len(bags[q]) == 1:
+                        # if there's a node that only has this label, use that
+                        labels[q] = str(v)
+                        v_labelled = True
+                        break
+                if not v_labelled and chain:
+                    # otherwise, pick a random node for this label
+                    node = random.choice(list(chain))
+                    (q, _) = node
+                    node_labels[q].append(v)
+            for q, label_vars in node_labels.items():
+                x, y = layout[q]
+                # TODO: find a better way of placing labels around the outside of nodes.
+                # Currently, if the graph is resized, labels will appear at a strange distance from the vertices.
+                # To fix this, the "scale" value below, rather than being a fixed constant, should be determined using
+                # both the size of the nodes and the size of the coordinate space of the graph.
+                scale = 0.1
+                # spread the labels evenly around the node.
+                for i, v in enumerate(label_vars):
+                    theta = 2 * math.pi * i / len(label_vars)
+                    new_x = x + scale * math.sin(theta)
+                    new_y = y + scale * math.cos(theta)
+
+                    plt.text(new_x, new_y, str(v), color=node_color[node_index[(q, v)]], horizontalalignment='center',
+                             verticalalignment='center')
+        else:
+            for v in emb.keys():
+                c = emb[v]
+                labels[list(c)[0]] = str(v)
 
     # draw the background (unused) graph first
     if unused_color is not None:
@@ -314,6 +392,48 @@ def draw_embedding(G, layout, emb, embedded_graph=None, interaction_edges=None,
     draw(G, layout, nodelist=nodelist, edgelist=edgelist,
          node_color=node_color, edge_color=edge_color, labels=labels,
          **kwargs)
+
+
+def compute_bags(C, emb):
+    # Given an overlapped embedding, compute the set of source nodes embedded at every target node.
+    bags = {v: [] for v in C.nodes()}
+    for x, chain in emb.items():
+        for v in chain:
+            bags[v].append(x)
+    return bags
+
+
+def unoverlapped_embedding(G, emb, interaction_edges):
+    # Given an overlapped embedding, construct a new graph and embedding without overlaps
+    # by making copies of nodes that have multiple variables.
+
+    bags = compute_bags(G, emb)
+    new_G = G.copy()
+    new_emb = dict()
+
+    for x, chain in emb.items():
+        for v in chain:
+            new_G.add_node((v, x), dummy=True)
+        for (u, v) in G.subgraph(chain).edges():
+            new_G.add_edge((u, x), (v, x))
+        new_emb[x] = {(v, x) for v in chain}
+
+    for (u, v) in G.edges():
+        for x in bags[u]:
+            for y in bags[v]:
+                new_G.add_edge((u, x), (v, y))
+
+    if interaction_edges:
+        new_interaction_edges = list(interaction_edges)
+        for (u, v) in interaction_edges:
+            for x in bags[u]:
+                for y in bags[v]:
+                    new_interaction_edges.append(((u, x), (v, y)))
+    else:
+        new_interaction_edges = None
+
+    return new_G, new_emb, new_interaction_edges
+
 
 def draw_yield(G, layout, perfect_graph, unused_color=(0.9,0.9,0.9,1.0),
                     fault_color=(1.0,0.0,0.0,1.0), fault_shape='x',

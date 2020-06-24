@@ -6,6 +6,7 @@ from sympy import *
 from sympy.parsing.sympy_parser import parse_expr
 from time import sleep
 import datetime
+import traceback
 
 #function to define the variables given the number of vars
 def DefVars(numOfVars):
@@ -18,8 +19,8 @@ def ReturnResults(results): #function to write results to result webserver file
   res = open("/var/www/html/results.txt","w+")
   res.write(results)
   res.close()
-  
-def GetInput(): #function to take the input from the server file 
+
+def GetInput(): #function to take the input from the server file
   try:
     inp = open("/var/www/html/storage.txt","r+")
     strIn = inp.read()
@@ -41,7 +42,7 @@ def GetInput(): #function to take the input from the server file
 
       for i in strDom:
         dom.append(float(i))
-      print(dom)  
+      print(dom)
       #the second term in the file should be the equation
       eq = parse_expr(inSplit[2], evaluate=False)
 
@@ -65,7 +66,7 @@ def GetInput(): #function to take the input from the server file
       data = [constraints.split(";"), int(numOfVars)]
 
     return (mode, data)
-  
+
   except Exception as ex:
     err = "QCPU-Ware ran into an exception:  " + str(ex)
     UpdateLog(err) #if there is a problem getting the input, write the error to the log file, and move on
@@ -77,12 +78,12 @@ def EmptyInput():
   inp = open("/var/www/html/storage.txt","r+")
   strIn = inp.read()
   inp.close()
-  
+
   if("\n" in strIn):
     return (False)
   else:
     return (True)
-  
+
 def UpdateLog(status):
   log = open("logs.txt", "a")
   time = datetime.datetime.now()
@@ -93,8 +94,9 @@ def UpdateLog(status):
 ####################  code  ####################
 while True: #run repeatedly in the background
   try:
+    mode = None
     #check to see if there is any input on the server
-    if (not EmptyInput()): 
+    if (not EmptyInput()):
       mode, data = GetInput()
 
       #check to see what mode was set
@@ -139,28 +141,30 @@ while True: #run repeatedly in the background
         boolean = boolean[:-5:]
         boolean += ")"
 
-        vars = ""
-        for i in range(numOfVars-1):
-            vars += "v" + str(i) + ", "
-        vars += "v" + str(numOfVars-1)
-
-        exe = '''def const(''' + vars + '''):
-          return''' + boolean + '''
-        '''
-
         #reformat vars for csp
-        vars = ""
+        vars = []
         for i in range(numOfVars-1):
-            vars += "'v" + str(i) + "', "
-        vars += "'v" + str(numOfVars-1) + "'"
+            vars.append('v' + str(i))
+        vars.append('v' + str(numOfVars-1))
 
+        variables = {} #define a dictionary to store the variable names as strings
+        for i in range(numOfVars):
+          asStr = "v" + str(i)
+          variables[asStr] = asStr
+
+        boolean = "bl = " + boolean
         #execute the function to make it exist
-        exec (exe)
+        def const(*args):
+          varsTemp = variables
+          for i in range(numOfVars):
+            asStr = "v" + str(i)
+            varsTemp[asStr] = args[i]
+          exec(boolean, varsTemp)
+          return(varsTemp["bl"])
 
-        #define the csp 
+        #define the csp
         csp = dwavebinarycsp.ConstraintSatisfactionProblem(dwavebinarycsp.BINARY)
-        add_const = '''csp.add_constraint(const, [''' + vars + '''])'''
-        exec(add_const)
+        csp.add_constraint(const, vars)
 
         bqm = dwavebinarycsp.stitch(csp)
 
@@ -176,12 +180,15 @@ while True: #run repeatedly in the background
         UpdateLog("success (mode = BCSP)")
 
     elif (mode == "error"): #an error occured
+      print("err")
       pass
 
     else: #if there is no input, then wait a bit and check again
       sleep(0.3)
-      
+
   except Exception as ex: #error processing or submitting the problem
     err = "QCPU-Ware ran into an exception:  " + str(ex)
     UpdateLog(err) #if there is a problem getting the input, write the error to the log file, and move on
     sleep(0.3)
+    print("err: ")
+    traceback.print_exc()

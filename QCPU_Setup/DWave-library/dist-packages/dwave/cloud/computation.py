@@ -84,10 +84,10 @@ class Future(object):
         whether the sampling is completed.
 
         >>> from dwave.cloud import Client
-        >>> client = Client.from_config()
-        >>> solver = client.get_solver()
-        >>> u, v = next(iter(solver.edges))
-        >>> Q = {(u, u): -1, (u, v): 0, (v, u): 2, (v, v): -1}
+        >>> client = Client.from_config()       # doctest: +SKIP
+        >>> solver = client.get_solver()        # doctest: +SKIP
+        >>> u, v = next(iter(solver.edges))     # doctest: +SKIP
+        >>> Q = {(u, u): -1, (u, v): 0, (v, u): 2, (v, v): -1}   # doctest: +SKIP
         >>> computation = solver.sample_qubo(Q, num_reads=100)   # doctest: +SKIP
         >>> computation.done()  # doctest: +SKIP
         False
@@ -95,7 +95,7 @@ class Future(object):
         u'1cefeb6d-ebd5-4592-87c0-4cc43ec03e27'
         >>> computation.done()   # doctest: +SKIP
         True
-        >>> client.close()
+        >>> client.close()       # doctest: +SKIP
     """
 
     def __init__(self, solver, id_, return_matrix=False):
@@ -105,6 +105,9 @@ class Future(object):
         self._cancel_requested = False
         self._cancel_sent = False
         self._single_cancel_lock = threading.Lock()  # Make sure we only call cancel once
+
+        # ID readiness notification
+        self._id_ready_event = threading.Event()
 
         # Should the results be decoded as python lists or numpy matrices
         if return_matrix and not _numpy:
@@ -255,10 +258,10 @@ class Future(object):
             :code:`first = next(Future.as_completed(computation))` instead.)
 
             >>> import dwave.cloud as dc
-            >>> client = dc.Client.from_config()
-            >>> solver = client.get_solver()
-            >>> u, v = next(iter(solver.edges))
-            >>> Q = {(u, u): -1, (u, v): 0, (v, u): 2, (v, v): -1}
+            >>> client = dc.Client.from_config()  # doctest: +SKIP
+            >>> solver = client.get_solver()      # doctest: +SKIP
+            >>> u, v = next(iter(solver.edges))   # doctest: +SKIP
+            >>> Q = {(u, u): -1, (u, v): 0, (v, u): 2, (v, v): -1}    # doctest: +SKIP
             >>> computation = [solver.sample_qubo(Q, num_reads=1000),
             ...                solver.sample_qubo(Q, num_reads=50),
             ...                solver.sample_qubo(Q, num_reads=10)]   # doctest: +SKIP
@@ -272,7 +275,7 @@ class Future(object):
             True
             >>> print(computation[2].done())   # doctest: +SKIP
             True
-            >>> client.close()
+            >>> client.close()         # doctest: +SKIP
 
         """
         if min_done is None:
@@ -352,10 +355,10 @@ class Future(object):
             yields timing information for each job as it completes.
 
             >>> import dwave.cloud as dc
-            >>> client = dc.Client.from_config()
-            >>> solver = client.get_solver()
-            >>> u, v = next(iter(solver.edges))
-            >>> Q = {(u, u): -1, (u, v): 0, (v, u): 2, (v, v): -1}
+            >>> client = dc.Client.from_config()   # doctest: +SKIP
+            >>> solver = client.get_solver()       # doctest: +SKIP
+            >>> u, v = next(iter(solver.edges))    # doctest: +SKIP
+            >>> Q = {(u, u): -1, (u, v): 0, (v, u): 2, (v, v): -1}    # doctest: +SKIP
             >>> computation = [solver.sample_qubo(Q, num_reads=1000),
             ...                solver.sample_qubo(Q, num_reads=50),
             ...                solver.sample_qubo(Q, num_reads=10)]   # doctest: +SKIP
@@ -366,7 +369,7 @@ class Future(object):
             {'total_real_time': 10816, ... 'qpu_readout_time_per_sample': 123}
             {'total_real_time': 26285, ... 'qpu_readout_time_per_sample': 123}
             ...
-            >>> client.close()
+            >>> client.close()       # doctest: +SKIP
 
         """
         not_done = fs
@@ -397,20 +400,20 @@ class Future(object):
             waiting for 10 seconds for sampling to complete.
 
             >>> from dwave.cloud import Client
-            >>> client = Client.from_config()
-            >>> solver = client.get_solver()
-            >>> u, v = next(iter(solver.edges))
-            >>> Q = {(u, u): -1, (u, v): 0, (v, u): 2, (v, v): -1}
+            >>> client = Client.from_config()         # doctest: +SKIP
+            >>> solver = client.get_solver()          # doctest: +SKIP
+            >>> u, v = next(iter(solver.edges))       # doctest: +SKIP
+            >>> Q = {(u, u): -1, (u, v): 0, (v, u): 2, (v, v): -1}  # doctest: +SKIP
             >>> computation = solver.sample_qubo(Q, num_reads=100)   # doctest: +SKIP
             >>> computation.wait(timeout=10)    # doctest: +SKIP
             False
-            >>> computation.remote_status
+            >>> computation.remote_status        # doctest: +SKIP
             'IN_PROGRESS'
             >>> computation.wait(timeout=10)    # doctest: +SKIP
             True
             >>> computation.remote_status       # doctest: +SKIP
             'COMPLETED'
-            >>> client.close()
+            >>> client.close()         # doctest: +SKIP
         """
         return self._results_ready_event.wait(timeout)
 
@@ -430,16 +433,16 @@ class Future(object):
             couple of times whether sampling is completed.
 
             >>> from dwave.cloud import Client
-            >>> client = Client.from_config()
-            >>> solver = client.get_solver()
-            >>> u, v = next(iter(solver.edges))
-            >>> Q = {(u, u): -1, (u, v): 0, (v, u): 2, (v, v): -1}
+            >>> client = Client.from_config()       # doctest: +SKIP
+            >>> solver = client.get_solver()        # doctest: +SKIP
+            >>> u, v = next(iter(solver.edges))     # doctest: +SKIP
+            >>> Q = {(u, u): -1, (u, v): 0, (v, u): 2, (v, v): -1}   # doctest: +SKIP
             >>> computation = solver.sample_qubo(Q, num_reads=100)   # doctest: +SKIP
             >>> computation.done()  # doctest: +SKIP
             False
             >>> computation.done()   # doctest: +SKIP
             True
-            >>> client.close()
+            >>> client.close()       # doctest: +SKIP
         """
         return self._results_ready_event.is_set()
 
@@ -456,17 +459,17 @@ class Future(object):
             (and in this case succeeds) to cancel it.
 
             >>> from dwave.cloud import Client
-            >>> client = Client.from_config()
-            >>> solver = client.get_solver()
-            >>> u, v = next(iter(solver.edges))
-            >>> Q = {(u, u): -1, (u, v): 0, (v, u): 2, (v, v): -1}
+            >>> client = Client.from_config()         # doctest: +SKIP
+            >>> solver = client.get_solver()          # doctest: +SKIP
+            >>> u, v = next(iter(solver.edges))       # doctest: +SKIP
+            >>> Q = {(u, u): -1, (u, v): 0, (v, u): 2, (v, v): -1}   # doctest: +SKIP
             >>> computation = solver.sample_qubo(Q, num_reads=100)   # doctest: +SKIP
             >>> computation.cancel()  # doctest: +SKIP
             >>> computation.done()   # doctest: +SKIP
             True
             >>> computation.remote_status    # doctest: +SKIP
             u'CANCELLED'
-            >>> client.close()
+            >>> client.close()      # doctest: +SKIP
 
         """
         # Don't need to cancel something already finished
@@ -486,6 +489,45 @@ class Future(object):
             if self.id is not None and not self._cancel_sent:
                 self._cancel_sent = True
                 self.solver.client._cancel(self.id, self)
+
+    def wait_id(self, timeout=None):
+        """Blocking id getter.
+
+        Return the submitted problem ID, but unlike :meth:`.id`, block until the
+        ID becomes known, or until `timeout` expires.
+
+        Args:
+            timeout (float, default=None):
+                Timeout in seconds. By default, wait indefinitely for problem
+                id to become known/available.
+
+        Returns:
+            str:
+                Problem ID, as returned by SAPI.
+
+        Raises:
+            :exc:`concurrent.futures.TimeoutError`:
+                When `timeout` exceeded, and problem id not ready.
+
+        """
+        if not self._id_ready_event.wait(timeout=timeout):
+            raise TimeoutError("problem id not available yet")
+
+        return self._id
+
+    @property
+    def id(self):
+        """Simple non-blocking id getter for backward compat."""
+        return self._id
+
+    @id.setter
+    def id(self, value):
+        """Sets the problem ID, notifying the related event."""
+        self._id = value
+
+        # notify ID is set/ready
+        if value is not None:
+            self._id_ready_event.set()
 
     def result(self):
         """Results for a submitted job.
@@ -634,6 +676,7 @@ class Future(object):
 
         raise InvalidAPIResponseError("Active variables not present in the response")
 
+    # XXX: rename to num_occurrences, alias as occurrences, but deprecate it
     @property
     def occurrences(self):
         """Occurrences buffer for the submitted job.
@@ -689,9 +732,8 @@ class Future(object):
         else:
             return [1] * len(result['solutions'])
 
-    @property
-    def sampleset(self):
-        """Return :class:`~dimod.SampleSet` representation of the results."""
+    def wait_sampleset(self):
+        """Blocking sampleset getter."""
 
         result = self._load_result()
         if 'sampleset' in result:
@@ -705,7 +747,7 @@ class Future(object):
                                "Re-install the library with 'bqm' support.")
 
         # filter inactive variables from samples
-        variables = set(self.variables)
+        variables = self.variables
         samples = [[sample[v] for v in variables] for sample in self.samples]
 
         # infer vartype from problem type
@@ -713,15 +755,37 @@ class Future(object):
         vartype_from_problem_type = {'ising': 'SPIN', 'qubo': 'BINARY'}
         vartype = vartype_from_problem_type[self.problem_type]
 
-        # include timing in info
-        info = dict(timing=self.timing)
+        # include timing and id in info
+        info = dict(timing=self.timing, problem_id=self.id)
 
         sampleset = dimod.SampleSet.from_samples(
             (samples, variables), vartype=vartype,
             energy=self.energies, num_occurrences=self.occurrences,
             info=info, sort_labels=True)
 
-        self._result['sampleset'] = sampleset
+        # this means that samplesets retrieved BEFORE this function are called
+        # are not the same object as after, but it is a simpler implementation
+        self._result['sampleset'] = self._sampleset = sampleset
+
+        return sampleset
+
+    @property
+    def sampleset(self):
+        """Return :class:`~dimod.SampleSet` representation of the results."""
+
+        try:
+            return self._sampleset
+        except AttributeError:
+            pass
+
+        try:
+            import dimod
+        except ImportError:
+            raise RuntimeError("Can't construct SampleSet without dimod. "
+                               "Re-install the library with 'bqm' support.")
+
+        self._sampleset = sampleset = dimod.SampleSet.from_future(
+            self, lambda f: f.wait_sampleset())
 
         return sampleset
 
@@ -749,10 +813,10 @@ class Future(object):
             prints timing information for the job.
 
             >>> from dwave.cloud import Client
-            >>> with Client.from_config() as client:
+            >>> with Client.from_config() as client:      # doctest: +SKIP
             ...     solver = client.get_solver()
             ...     u, v = next(iter(solver.edges))
-            ...     computation = solver.sample_ising({u: -1, v: 1},{}, num_reads=5)   # doctest: +SKIP
+            ...     computation = solver.sample_ising({u: -1, v: 1},{}, num_reads=5)
             ...     print(computation.timing)
             ...
             {'total_real_time': 10961, 'anneal_time_per_run': 20, ...}

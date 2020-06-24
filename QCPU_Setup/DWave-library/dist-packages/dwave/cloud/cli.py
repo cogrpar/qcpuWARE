@@ -17,6 +17,8 @@ import sys
 import ast
 import json
 import datetime
+import subprocess
+import pkg_resources
 
 import click
 import requests.exceptions
@@ -27,7 +29,8 @@ import dwave.cloud
 from dwave.cloud import Client
 from dwave.cloud.utils import (
     default_text_input, click_info_switch, generate_random_ising_problem,
-    datetime_to_timestamp, utcnow, strtrunc, CLIError, set_loglevel)
+    datetime_to_timestamp, utcnow, strtrunc, CLIError, set_loglevel,
+    get_contrib_packages)
 from dwave.cloud.coders import encode_problem_as_bq
 from dwave.cloud.package_info import __title__, __version__
 from dwave.cloud.exceptions import (
@@ -116,6 +119,11 @@ def inspect(config_file, profile):
               help='Connection profile (section) name')
 def create(config_file, profile):
     """Create and/or update cloud client configuration file."""
+    return _config_create(config_file, profile)
+
+
+def _config_create(config_file, profile):
+    """`dwave config create` helper."""
 
     # determine the config file path
     if config_file:
@@ -167,7 +175,7 @@ def create(config_file, profile):
     variables = 'endpoint token client solver proxy'.split()
     prompts = ['API endpoint URL',
                'Authentication token',
-               'Default client class (qpu or sw)',
+               'Default client class',
                'Default solver']
     for var, prompt in zip(variables, prompts):
         default_val = config.get(profile, var, fallback=None)
@@ -188,12 +196,21 @@ def create(config_file, profile):
     return 0
 
 
-def _ping(config_file, profile, solver_def, request_timeout, polling_timeout, output):
+def _ping(config_file, profile, solver_def, sampling_params, request_timeout,
+          polling_timeout, output):
     """Helper method for the ping command that uses `output()` for info output
     and raises `CLIError()` on handled errors.
 
     This function is invariant to output format and/or error signaling mechanism.
     """
+    params = {}
+    if sampling_params is not None:
+        try:
+            params = json.loads(sampling_params)
+            assert isinstance(params, dict)
+        except:
+            raise CLIError("sampling parameters required as JSON-encoded "
+                           "map of param names to values", code=99)
 
     config = dict(config_file=config_file, profile=profile, solver=solver_def)
     if request_timeout is not None:
@@ -245,7 +262,7 @@ def _ping(config_file, profile, solver_def, request_timeout, polling_timeout, ou
     output("Using solver: {solver_id}", solver_id=solver.id)
 
     try:
-        future = solver.sample_ising(*problem)
+        future = solver.sample_ising(*problem, **params)
         timing = future.timing
     except RequestTimeout:
         raise CLIError("API connection timed out.", 8)
@@ -262,7 +279,7 @@ def _ping(config_file, profile, solver_def, request_timeout, polling_timeout, ou
     output(" * Total: {wallclock_total:.3f} ms", wallclock_total=(t2-t0)*1000.0)
     if timing:
         output("\nQPU timing:")
-        for component, duration in timing.items():
+        for component, duration in sorted(timing.items()):
             output(" * %(name)s = {%(name)s} us" % {"name": component}, **{component: duration})
     else:
         output("\nQPU timing data not available.")
@@ -274,13 +291,15 @@ def _ping(config_file, profile, solver_def, request_timeout, polling_timeout, ou
 @click.option('--profile', '-p', default=None,
               help='Connection profile (section) name')
 @click.option('--solver', '-s', 'solver_def', default=None, help='Feature-based solver definition')
+@click.option('--sampling-params', '-m', default=None, help='Sampling parameters (JSON encoded)')
 @click.option('--request-timeout', default=None, type=float,
               help='Connection and read timeouts (in seconds) for all API requests')
 @click.option('--polling-timeout', default=None, type=float,
               help='Problem polling timeout in seconds (time-to-solution timeout)')
 @click.option('--json', 'json_output', default=False, is_flag=True,
               help='JSON output')
-def ping(config_file, profile, solver_def, json_output, request_timeout, polling_timeout):
+def ping(config_file, profile, solver_def, sampling_params, json_output,
+         request_timeout, polling_timeout):
     """Ping the QPU by submitting a single-qubit problem."""
 
     now = utcnow()
@@ -296,7 +315,8 @@ def ping(config_file, profile, solver_def, json_output, request_timeout, polling
             click.echo(json.dumps(info))
 
     try:
-        _ping(config_file, profile, solver_def, request_timeout, polling_timeout, output)
+        _ping(config_file, profile, solver_def, sampling_params,
+              request_timeout, polling_timeout, output)
     except CLIError as error:
         output("Error: {error} (code: {code})", error=str(error), code=error.code)
         sys.exit(error.code)
@@ -311,15 +331,21 @@ def ping(config_file, profile, solver_def, json_output, request_timeout, polling
 @click.option('--config-file', '-c', default=None,
               type=click.Path(exists=True, dir_okay=False), help='Configuration file path')
 @click.option('--profile', '-p', default=None, help='Connection profile name')
-@click.option('--solver', '-s', 'solver_def', default=None, help='Feature-based solver filter')
+@click.option('--solver', '-s', 'solver_def', default=None,
+              help='Feature-based solver filter (default: from config)')
 @click.option('--list', '-l', 'list_solvers', default=False, is_flag=True,
-              help='List available solvers, one per line')
-def solvers(config_file, profile, solver_def, list_solvers):
+              help='Print filtered list of solver names, one per line')
+@click.option('--all', '-a', 'list_all', default=False, is_flag=True,
+              help='Ignore solver filter (list/print all solvers)')
+def solvers(config_file, profile, solver_def, list_solvers, list_all):
     """Get solver details.
 
-    Unless solver name/id specified, fetch and display details for
-    all online solvers available on the configured endpoint.
+    Solver filter is inherited from environment or the specified configuration
+    file and profile.
     """
+
+    if list_all:
+        solver_def = '{}'
 
     with Client.from_config(
             config_file=config_file, profile=profile, solver=solver_def) as client:
@@ -491,3 +517,150 @@ def upload(config_file, profile, problem_id, format, input_file):
         return 2
 
     click.echo("Upload done. Problem ID: {!r}".format(remote_problem_id))
+
+
+@cli.command()
+@click.option('--list', '-l', 'list_all', default=False, is_flag=True,
+              help='List available contrib (non-OSS) packages')
+@click.option('--all', '-a', 'install_all', default=False, is_flag=True,
+              help='Install all contrib (non-OSS) packages')
+@click.option('--accept-license', '--yes', '-y', default=False, is_flag=True,
+              help='Accept license(s) without prompting')
+@click.option('--verbose', '-v', default=False, is_flag=True,
+              help='Increase output verbosity')
+@click.argument('packages', nargs=-1)
+def install(list_all, install_all, accept_license, verbose, packages):
+    """Install optional non-open-source Ocean packages."""
+
+    contrib = get_contrib_packages()
+
+    if list_all:
+        if verbose:
+            # ~YAML output
+            for pkg, specs in contrib.items():
+                click.echo("Package: {}".format(pkg))
+                click.echo("  Title: {}".format(specs['title']))
+                click.echo("  Description: {}".format(specs['description']))
+                click.echo("  License: {}".format(specs['license']['name']))
+                click.echo("  License-URL: {}".format(specs['license']['url']))
+                click.echo("  Requires: {}".format(', '.join(specs['requirements'])))
+                click.echo()
+        else:
+            # concise list of available packages
+            click.echo("Available packages: {}.".format(', '.join(contrib.keys())))
+        return
+
+    if install_all:
+        packages = list(contrib)
+
+    if not packages:
+        click.echo('Nothing to do. Try "dwave install --help".')
+        return
+
+    # check all packages requested are registered/available
+    for pkg in packages:
+        if pkg not in contrib:
+            click.echo("Package {!r} not found.".format(pkg))
+            return 1
+
+    for pkg in packages:
+        _install_contrib_package(pkg, verbose=verbose, prompt=not accept_license)
+
+
+def _is_pip_package_installed(requirement):
+    """Checks if a pip `requirement` is installed."""
+
+    reqs = list(pkg_resources.parse_requirements(requirement))
+    assert len(reqs) == 1
+    req = reqs[0]
+
+    # NOTE: py35+ required
+    res = subprocess.run(
+        [sys.executable, "-m", "pip", "show", req.name],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+    return res.returncode == 0
+
+
+def _install_contrib_package(name, verbose=False, prompt=True):
+    """pip install non-oss package `name` from dwave's pypi repo."""
+
+    contrib = get_contrib_packages()
+    dwave_contrib_repo = "https://pypi.dwavesys.com/simple"
+
+    assert name in contrib
+    pkg = contrib[name]
+    title = pkg['title']
+
+    # check is `name` package is already installed
+    # right now the only way to check that is to check if all dependants from
+    # requirements are installed
+    # NOTE: currently we do not check if versions match!
+    if all(_is_pip_package_installed(req) for req in pkg['requirements']):
+        click.echo("{} already installed.\n".format(title))
+        return
+
+    # basic pkg info
+    click.echo(title)
+    click.echo(pkg['description'])
+
+    # license prompt
+    license = pkg['license']
+    msgtpl = ("This package is available under the {name} license.\n"
+              "The terms of the license are available online: {url}")
+    click.echo(msgtpl.format(name=license['name'], url=license['url']))
+
+    if prompt:
+        val = default_text_input('Install (y/n)?', default='y', optional=False)
+        if val.lower() != 'y':
+            click.echo('Skipping: {}.\n'.format(title))
+            return
+
+    click.echo('Installing: {}'.format(title))
+    for req in pkg['requirements']:
+
+        # NOTE: py35+ required
+        res = subprocess.run(
+            [sys.executable, "-m", "pip", "install", req,
+             "--extra-index", dwave_contrib_repo],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+        if res.returncode or verbose:
+            click.echo(res.stdout)
+
+    click.echo('Successfully installed {}.\n'.format(title))
+
+
+@cli.command()
+@click.option('--install-all', '--all', '-a', default=False, is_flag=True,
+              help='Install all non-open-source packages '\
+                   'available and accept licenses without prompting')
+@click.option('--verbose', '-v', default=False, is_flag=True,
+              help='Increase output verbosity')
+def setup(install_all, verbose):
+    """Setup optional Ocean packages and configuration file(s)."""
+
+    contrib = get_contrib_packages()
+    packages = list(contrib)
+
+    if not packages:
+        install = False
+    elif install_all:
+        click.echo("Installing all optional non-open-source packages.\n")
+        install = True
+    else:
+        # The default flow: SDK installed, so some contrib packages registered
+        # and `dwave setup` ran without `--all` flag.
+        click.echo("Optionally install non-open-source packages and "
+                   "configure your environment.\n")
+        prompt = "Do you want to select non-open-source packages to install (y/n)?"
+        val = default_text_input(prompt, default='y')
+        install = val.lower() == 'y'
+        click.echo()
+
+    if install:
+        for pkg in packages:
+            _install_contrib_package(pkg, verbose=verbose, prompt=not install_all)
+
+    click.echo("Creating the D-Wave configuration file.")
+    return _config_create(config_file=None, profile=None)

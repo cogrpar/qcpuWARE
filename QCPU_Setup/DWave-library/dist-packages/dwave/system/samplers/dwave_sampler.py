@@ -14,22 +14,71 @@
 #
 # ================================================================================================
 """
-A :std:doc:`dimod sampler <dimod:reference/samplers>` for the D-Wave system.
+A :std:doc:`dimod sampler <oceandocs:docs_dimod/reference/samplers>` for the D-Wave system.
 
 See :std:doc:`Ocean Glossary <oceandocs:glossary>`
 for explanations of technical terms in descriptions of Ocean tools.
 """
 from __future__ import division
 
+import functools
+import time
+
 from warnings import warn
 
 import dimod
 
 from dimod.exceptions import BinaryQuadraticModelStructureError
-
 from dwave.cloud import Client
+from dwave.cloud.exceptions import SolverOfflineError, SolverNotFoundError
+
+from dwave.system.warnings import WarningHandler, WarningAction
 
 __all__ = ['DWaveSampler']
+
+
+def _failover(f):
+    @functools.wraps(f)
+    def wrapper(sampler, *args, **kwargs):
+        while True:
+            try:
+                return f(sampler, *args, **kwargs)
+            except SolverOfflineError as err:
+                if not sampler.failover:
+                    raise err
+
+            try:
+                # the requested features are saved on the client object, so
+                # we just need to request a new solver
+                sampler.solver = sampler.client.get_solver()
+
+                # delete the lazily-constructed attributes
+                try:
+                    del sampler._edgelist
+                except AttributeError:
+                    pass
+
+                try:
+                    del sampler._nodelist
+                except AttributeError:
+                    pass
+
+                try:
+                    del sampler._parameters
+                except AttributeError:
+                    pass
+
+                try:
+                    del sampler._properties
+                except AttributeError:
+                    pass
+
+            except SolverNotFoundError as err:
+                if sampler.retry_interval < 0:
+                    raise err
+
+                time.sleep(sampler.retry_interval)
+    return wrapper
 
 
 class DWaveSampler(dimod.Sampler, dimod.Structured):
@@ -43,6 +92,19 @@ class DWaveSampler(dimod.Sampler, dimod.Structured):
     Inherits from :class:`dimod.Sampler` and :class:`dimod.Structured`.
 
     Args:
+        failover (bool, optional, default=False):
+            Switch to a new QPU in the rare event that the currently connected
+            system goes offline. Note that different QPUs may have different
+            hardware graphs and a failover will result in a regenerated
+            :attr:`.nodelist`, :attr:`.edgelist`, :attr:`.properties` and
+            :attr:`.parameters`.
+
+        retry_interval (number, optional, default=-1):
+            The amount of time (in seconds) to wait to poll for a solver in
+            the case that no solver is found. If `retry_interval` is negative
+            then it will instead propogate the `SolverNotFoundError` to the
+            user.
+
         config_file (str, optional):
             Path to a configuration file that identifies a D-Wave system and provides
             connection information.
@@ -75,20 +137,21 @@ class DWaveSampler(dimod.Sampler, dimod.Structured):
         as its URL and an autentication token, are implicitly set in a configuration file
         or as environment variables, as described in
         `Configuring a D-Wave System <https://docs.ocean.dwavesys.com/en/latest/overview/dwavesys.html>`_.
+        Given sufficient reads (here 100), the quantum
+        computer should return the best solution, :math:`{1, -1}` on qubits 0 and 1,
+        respectively, as its first sample (samples are ordered from lowest energy).
 
-        >>> from dwave.system.samplers import DWaveSampler
+        >>> from dwave.system import DWaveSampler
         >>> sampler = DWaveSampler(solver={'qubits__issuperset': {0, 1}})
-        >>> sampleset = sampler.sample_ising({0: -1, 1: 1}, {})
-        >>> for sample in sampleset.samples():  # doctest: +SKIP
-        ...    print(sample)
-        ...
-        {0: 1, 1: -1}
+        >>> sampleset = sampler.sample_ising({0: -1, 1: 1}, {}, num_reads=100)
+        >>> sampleset.first.sample[0] == 1 and sampleset.first.sample[1] == -1
+        True
 
     See `Ocean Glossary <https://docs.ocean.dwavesys.com/en/latest/glossary.html>`_
     for explanations of technical terms in descriptions of Ocean tools.
 
     """
-    def __init__(self, **config):
+    def __init__(self, failover=False, retry_interval=-1, **config):
 
         if config.get('solver_features') is not None:
             warn("'solver_features' argument has been renamed to 'solver'.", DeprecationWarning)
@@ -101,9 +164,13 @@ class DWaveSampler(dimod.Sampler, dimod.Structured):
         self.client = Client.from_config(**config)
         self.solver = self.client.get_solver()
 
-        # need to set up the properties, parameters
-        self._properties = self.solver.properties.copy()  # shallow copy
-        self._parameters = {param: ['parameters'] for param in self.solver.properties['parameters']}
+        self.failover = failover
+        self.retry_interval = retry_interval
+
+    warnings_default = WarningAction.IGNORE
+    """Defines the default behabior for :meth:`.sample_ising`'s  and
+    :meth:`sample_qubo`'s `warnings` kwarg.
+    """
 
     @property
     def properties(self):
@@ -116,7 +183,7 @@ class DWaveSampler(dimod.Sampler, dimod.Structured):
 
         Examples:
 
-            >>> from dwave.system.samplers import DWaveSampler
+            >>> from dwave.system import DWaveSampler
             >>> sampler = DWaveSampler()
             >>> sampler.properties    # doctest: +SKIP
             {u'anneal_offset_ranges': [[-0.2197463755538704, 0.03821687759418928],
@@ -128,7 +195,11 @@ class DWaveSampler(dimod.Sampler, dimod.Structured):
         for explanations of technical terms in descriptions of Ocean tools.
 
         """
-        return self._properties
+        try:
+            return self._properties
+        except AttributeError:
+            self._properties = properties = self.solver.properties.copy()
+            return properties
 
     @property
     def parameters(self):
@@ -143,7 +214,7 @@ class DWaveSampler(dimod.Sampler, dimod.Structured):
 
         Examples:
 
-            >>> from dwave.system.samplers import DWaveSampler
+            >>> from dwave.system import DWaveSampler
             >>> sampler = DWaveSampler()
             >>> sampler.parameters    # doctest: +SKIP
             {u'anneal_offsets': ['parameters'],
@@ -157,24 +228,26 @@ class DWaveSampler(dimod.Sampler, dimod.Structured):
         for explanations of technical terms in descriptions of Ocean tools.
 
         """
-        return self._parameters
+        try:
+            return self._parameters
+        except AttributeError:
+            parameters = {param: ['parameters']
+                          for param in self.properties['parameters']}
+            parameters.update(warnings=[])
+            self._parameters = parameters
+            return parameters
 
     @property
     def edgelist(self):
         """list: List of active couplers for the D-Wave solver.
 
         Examples:
+            Coupler list for one D-Wave 2000Q system (output snipped for brevity).
 
-            >>> from dwave.system.samplers import DWaveSampler
+            >>> from dwave.system import DWaveSampler
             >>> sampler = DWaveSampler()
-            >>> sampler.edgelist    # doctest: +SKIP
-            [(0, 4),
-             (0, 5),
-             (0, 6),
-             (0, 7),
-             (0, 128),
-             (1, 4),
-            # Snipped above response for brevity
+            >>> sampler.edgelist
+            [(0, 4), (0, 5), (0, 6), (0, 7), ...
 
         See `Ocean Glossary <https://docs.ocean.dwavesys.com/en/latest/glossary.html>`_
         for explanations of technical terms in descriptions of Ocean tools.
@@ -185,7 +258,7 @@ class DWaveSampler(dimod.Sampler, dimod.Structured):
             edgelist = self._edgelist
         except AttributeError:
             self._edgelist = edgelist = sorted(set((u, v) if u < v else (v, u)
-                                               for u, v in self.solver.edges))
+                                                   for u, v in self.solver.edges))
         return edgelist
 
     @property
@@ -193,14 +266,12 @@ class DWaveSampler(dimod.Sampler, dimod.Structured):
         """list: List of active qubits for the D-Wave solver.
 
         Examples:
+            Node list for one D-Wave 2000Q system (output snipped for brevity).
 
-            >>> from dwave.system.samplers import DWaveSampler
+            >>> from dwave.system import DWaveSampler
             >>> sampler = DWaveSampler()
-            >>> sampler.nodelist    # doctest: +SKIP
-            [0,
-             1,
-             2,
-            # Snipped above response for brevity
+            >>> sampler.nodelist
+            [0, 1, 2, ...
 
         See `Ocean Glossary <https://docs.ocean.dwavesys.com/en/latest/glossary.html>`_
         for explanations of technical terms in descriptions of Ocean tools.
@@ -213,21 +284,20 @@ class DWaveSampler(dimod.Sampler, dimod.Structured):
             self._nodelist = nodelist = sorted(self.solver.nodes)
         return nodelist
 
-    def sample_ising(self, h, J, **kwargs):
+    @_failover
+    def sample(self, bqm, warnings=None, **kwargs):
         """Sample from the specified Ising model.
 
         Args:
-            h (dict/list):
-                Linear biases of the Ising model. If a dict, should be of the
-                form `{v: bias, ...}` where `v` is a spin-valued variable and
-                `bias` is its associated bias. If a list, it is treated as a
-                list of biases where the indices are the variable labels,
-                except in the case of missing qubits in which case 0 biases are
-                ignored while a non-zero bias set on a missing qubit raises an
-                error.
+            bqm (:class:`~dimod.BinaryQuadraticModel`):
+                The binary quadratic model. Must match :attr:`.nodelist` and
+                :attr:`.edgelist`.
 
-            J (dict[(int, int): float]):
-                Quadratic biases of the Ising model.
+            warnings (:class:`~dwave.system.warnings.WarningAction`, optional):
+                Defines what warning action to take, if any. See
+                :mod:`~dwave.system.warnings`. The default behaviour is defined
+                by :attr:`warnings_default`, which itself defaults to
+                :class:`~dwave.system.warnings.IGNORE`
 
             **kwargs:
                 Optional keyword arguments for the sampling method, specified per solver in
@@ -243,95 +313,60 @@ class DWaveSampler(dimod.Sampler, dimod.Structured):
 
         Examples:
             This example submits a two-variable Ising problem mapped directly to qubits
-            0 and 1 on a D-Wave system.
+            0 and 1 on a D-Wave system. Given sufficient reads (here 100), the quantum
+            computer should return the best solution, :math:`{1, -1}` on qubits 0 and 1,
+            respectively, as its first sample (samples are ordered from lowest energy).
 
-            >>> from dwave.system.samplers import DWaveSampler
-            >>> sampler = DWaveSampler()
-            >>> sampleset = sampler.sample_ising({0: -1, 1: 1}, {})
-            >>> for sample in sampleset.samples():    # doctest: +SKIP
-            ...    print(sample)
-            ...
-            {0: 1, 1: -1}
+            >>> from dwave.system import DWaveSampler
+            >>> sampler = DWaveSampler(solver={'qubits__issuperset': {0, 1}})
+            >>> sampleset = sampler.sample_ising({0: -1, 1: 1}, {}, num_reads=100)
+            >>> sampleset.first.sample[0] == 1 and sampleset.first.sample[1] == -1
+            True
 
         See `Ocean Glossary <https://docs.ocean.dwavesys.com/en/latest/glossary.html>`_
         for explanations of technical terms in descriptions of Ocean tools.
 
         """
-        nodes = self.solver.nodes  # set rather than .nodelist which is a list
 
+        solver = self.solver
+
+        if not (solver.nodes.issuperset(bqm.linear) and
+                solver.edges.issuperset(bqm.quadratic)):
+            msg = "Problem graph incompatible with solver."
+            raise BinaryQuadraticModelStructureError(msg)
+
+        future = solver.sample_bqm(bqm, **kwargs)
+
+        if warnings is None:
+            warnings = self.warnings_default
+        warninghandler = WarningHandler(warnings)
+        warninghandler.energy_scale(bqm)
+
+        # need a hook so that we can check the sampleset (lazily) for
+        # warnings
+        def _hook(computation):
+            sampleset = computation.sampleset
+
+            if warninghandler is not None:
+                warninghandler.too_few_samples(sampleset)
+                if warninghandler.action is WarningAction.SAVE:
+                    sampleset.info['warnings'] = warninghandler.saved
+
+            return sampleset
+
+        return dimod.SampleSet.from_future(future, _hook)
+
+    def sample_ising(self, h, *args, **kwargs):
+        # to be consistent with the cloud-client, we ignore the 0 biases
+        # on missing nodes for lists
         if isinstance(h, list):
-            # to be consistent with the cloud-client, we ignore the 0 biases
-            # on missing nodes.
-            h = dict((v, b) for v, b in enumerate(h) if b or v in nodes)
+            if len(h) > self.solver.num_qubits:
+                msg = "Problem graph incompatible with solver."
+                raise BinaryQuadraticModelStructureError(msg)
+            nodes = self.solver.nodes
+            h = dict((v, b) for v, b in enumerate(h) if b and v in nodes)
 
-        variables = set(h).union(*J)
-
-        # developer note: in the future we should probably catch exceptions
-        # from the cloud client, but for now this is simpler/cleaner. We use
-        # the solver's nodes/edges because they are a set, so faster lookup
-        edges = self.solver.edges
-        if not (all(v in nodes for v in h) and
-                all((u, v) in edges or (v, u) in edges for u, v in J)):
-            msg = "Problem graph incompatible with solver."
-            raise BinaryQuadraticModelStructureError(msg)
-
-        future = self.solver.sample_ising(h, J, **kwargs)
-
-        hook = _result_to_response_hook(variables, dimod.SPIN)
-        return dimod.SampleSet.from_future(future, hook)
-
-    def sample_qubo(self, Q, **kwargs):
-        """Sample from the specified QUBO.
-
-        Args:
-            Q (dict):
-                Coefficients of a quadratic unconstrained binary optimization (QUBO) model.
-
-            **kwargs:
-                Optional keyword arguments for the sampling method, specified per solver in
-                :attr:`.DWaveSampler.parameters`. D-Wave System Documentation's
-                `solver guide <https://docs.dwavesys.com/docs/latest/doc_solver_ref.html>`_
-                describes the parameters and properties supported on the D-Wave system.
-
-        Returns:
-            :class:`dimod.SampleSet`: A `dimod` :obj:`~dimod.SampleSet` object.
-            In it this sampler also provides timing information in the `info`
-            field as described in the D-Wave System Documentation's
-            `timing guide <https://docs.dwavesys.com/docs/latest/doc_timing.html>`_.
-
-        Examples:
-            This example submits a two-variable QUBO mapped directly to qubits
-            0 and 4 on a D-Wave system.
-
-            >>> from dwave.system.samplers import DWaveSampler
-            >>> sampler = DWaveSampler()
-            >>> Q = {(0, 0): -1, (4, 4): -1, (0, 4): 2}
-            >>> sampleset = sampler.sample_qubo(Q)
-            >>> for sample in sampleset.samples():    # doctest: +SKIP
-            ...    print(sample)
-            ...
-            {0: 0, 4: 1}
-
-        See `Ocean Glossary <https://docs.ocean.dwavesys.com/en/latest/glossary.html>`_
-        for explanations of technical terms in descriptions of Ocean tools.
-
-        """
-        variables = set().union(*Q)
-
-        # developer note: in the future we should probably catch exceptions
-        # from the cloud client, but for now this is simpler/cleaner. We use
-        # the solver's nodes/edges because they are a set, so faster lookup
-        nodes = self.solver.nodes
-        edges = self.solver.edges
-        if not all(u in nodes if u == v else ((u, v) in edges or (v, u) in edges)
-                   for u, v in Q):
-            msg = "Problem graph incompatible with solver."
-            raise BinaryQuadraticModelStructureError(msg)
-
-        future = self.solver.sample_qubo(Q, **kwargs)
-
-        hook = _result_to_response_hook(variables, dimod.BINARY)
-        return dimod.SampleSet.from_future(future, hook)
+        return super().sample_ising(h, *args, **kwargs)
 
     def validate_anneal_schedule(self, anneal_schedule):
         """Raise an exception if the specified schedule is invalid for the sampler.
@@ -369,7 +404,7 @@ class DWaveSampler(dimod.Sampler, dimod.Structured):
         Examples:
             This example sets a quench schedule on a D-Wave system.
 
-            >>> from dwave.system.samplers import DWaveSampler
+            >>> from dwave.system import DWaveSampler
             >>> sampler = DWaveSampler()
             >>> quench_schedule=[[0.0, 0.0], [12.0, 0.6], [12.8, 1.0]]
             >>> DWaveSampler().validate_anneal_schedule(quench_schedule)    # doctest: +SKIP
@@ -429,25 +464,3 @@ class DWaveSampler(dimod.Sampler, dimod.Structured):
         for (t0, s0), (t1, s1) in zip(anneal_schedule, anneal_schedule[1:]):
             if abs((s0 - s1) / (t0 - t1)) > max_slope:
                 raise ValueError("the maximum slope cannot exceed {}".format(max_slope))
-
-
-def _result_to_response_hook(variables, vartype):
-    def _hook(computation):
-        result = computation.result()
-
-        # get the samples. The future will return all spins so filter for the ones in variables
-        samples = [[sample[v] for v in variables] for sample in result.get('solutions')]
-
-        # finally put the timing information (if present) into the misc info. We ignore everything
-        # else
-        if 'timing' in result:
-            info = {'timing': result['timing']}
-        else:
-            info = {}
-
-        return dimod.SampleSet.from_samples((samples, variables), info=info, vartype=vartype,
-                                            energy=result['energies'],
-                                            num_occurrences=result.get('num_occurrences', None),
-                                            sort_labels=True)
-
-    return _hook

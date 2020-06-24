@@ -1,0 +1,3 @@
+[console_scripts]
+hybrid = hybrid.commands:main
+

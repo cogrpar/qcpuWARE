@@ -1,0 +1,3 @@
+class HybridError(Exception):
+    pass
+

@@ -99,7 +99,7 @@ def pegasus_layout(G, scale=1., center=None, dim=2, crosses=False):
         else:
             m = G.graph.get('rows')
             coord = pegasus_coordinates(m)
-            pos = {v: xy_coords(*coord.tuple(v)) for v in G.nodes()}
+            pos = {v: xy_coords(*coord.linear_to_pegasus(v)) for v in G.nodes()}
 
     return pos
 
@@ -276,6 +276,11 @@ def draw_pegasus_embedding(G, *args, **kwargs):
         If crosses is True, K_4,4 subgraphs are shown in a cross
         rather than L configuration. Ignored if G was defined with
         nice_coordinates=True.
+
+    overlapped_embedding: boolean (optional, default False)
+        If overlapped_embedding is True, then chains in emb may overlap (contain
+        the same vertices in G), and the drawing will display these overlaps as
+        concentric circles.
 
     kwargs : optional keywords
        See networkx.draw_networkx() for a description of optional keywords,
