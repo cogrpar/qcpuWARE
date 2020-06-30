@@ -127,7 +127,7 @@ while True: #run repeatedly in the background
         #convert the results back to decimal and send them to the webserver:
         results = ToDec(places, vals)
         result = "["
-        result += ', '.join(str(i) for i in results) + "]"
+        result += ', '.join(str(i) for i in results) + " ]"
         ReturnResults(result)
         UpdateLog("success (mode = funcExtreme)")
 
@@ -174,7 +174,7 @@ while True: #run repeatedly in the background
         for i in result:
           resultStr += str(i) + ", "
         resultStr = resultStr[:-2:]
-        resultStr += "]"
+        resultStr += " ]"
 
         ReturnResults(resultStr)
         UpdateLog("success (mode = BCSP)")
