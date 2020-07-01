@@ -40,7 +40,11 @@ def ToBin(domain, eq, var):
     
     bina = bina[:-2:]
 
-    eq = eq.subs(("v" + str(i)+"temp"), bina) #substitute the binary vars in for the decimal ones
+    #if the input equation is binary, we don't need to worry about the place values, so we can leave it as-is
+    if(power == 0):
+        eq = eq.subs(("v" + str(i) + "temp"), ("v" + str(i)))
+    else:
+        eq = eq.subs(("v" + str(i)+"temp"), bina) #substitute the binary vars in for the decimal ones
 
   eq = expand(eq)
   #replace fraction with decimal
@@ -127,6 +131,16 @@ def ToBin(domain, eq, var):
     
 #function to convert the binary results into base 10
 def ToDec(places, values):
+  #first determine if the input equation was binary by seeing if places is full of all 0s
+  boolean = True
+  for i in places:
+    if (i != 0):
+      boolean = False
+
+  if (boolean): #if the input is already boolean, then just return the results in base 2
+    return (values)
+
+  print(places)
   pos = 0 #keep track of the place value that we are on
   outVars = [] #an array to store the output values
   for i in places: #loop over the number of digits in each base ten var
