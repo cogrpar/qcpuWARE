@@ -16,11 +16,15 @@ def SolvMatrix(eq, inVars, Max):
         if (spl[j] == " "): #if there is a blank term
           pass
         else:
+          spl[j] = spl[j].replace("(", "")
+          spl[j] = spl[j].replace(")", "")
           negative.append(spl[j].replace(" ", ""))
       else: #append the positive term
         if (spl[j] == " "): #if there is a blank term
           pass
         else:
+          spl[0] = spl[0].replace("(", "")
+          spl[0] = spl[0].replace(")", "")
           positive.append(spl[0].replace(" ", "")) 
 
   #swap the pos and neg if we want to max the function (this corresponds to multiplying the funtion by -1)
