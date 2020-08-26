@@ -105,8 +105,8 @@ if ("install" in sys.argv[1]):
 		sym.wait()
 		#install dwave-ocean-sdk without dependancies to add the "dwave" command
 		dcmd = subprocess.Popen(["pip3 install dwave-ocean-sdk --no-dependencies"], shell=True)
-                dcmd.wait() 
- 
+		dcmd.wait() 
+		
 	    
 	if (platform == "n"): #if other platform, just use pip
 		pip_method = subprocess.Popen(["pip3 install dwave-ocean-sdk"], shell=True)
